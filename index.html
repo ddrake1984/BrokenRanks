@@ -175,10 +175,12 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
   <!-- FLASKS -->
   <div role="tabpanel" id="flasks" aria-labelledby="tab-flasks" hidden>
     <div class="bar">
-      <p class="hint">Each flask above Minor needs the flask one size down, plus one gathered and one hunted ingredient. Pick a type to follow its chain through all four sizes.</p>
-      <div class="chips" id="flask-chips"></div>
+      <p class="hint">Each flask above Minor needs the flask one size down, plus one gathered and one hunted ingredient. Pick a type to follow its chain through all four sizes, or search for an ingredient, location, mob or NPC.</p>
+      <input class="filter" id="flask-filter" type="search" placeholder="Search item, location, mob or NPC" aria-label="Search flasks">
     </div>
+    <div class="chips" id="flask-chips" style="margin:-6px 0 18px"></div>
     <div id="flask-tables"></div>
+    <p class="empty" id="flask-empty" hidden></p>
   </div>
 
   <!-- SHARDS -->
@@ -730,6 +732,8 @@ const FLASKS = [
     ["Pinaceae Root", 5, "Dmorther Garrison", "Cursed Claw", 2, "Vampiria", "Huncwyl"]]]
 ];
 const flaskTables = document.getElementById("flask-tables");
+const flaskFilter = document.getElementById("flask-filter");
+const FLASK_FIELDS = ["gathered", "gathered-n", "location", "hunted", "hunted-n", "mob", "npc"]; // same order as each row's values
 let flaskType = "All";
 function renderFlasks() {
   flaskTables.innerHTML = FLASKS.map(([size, ranks, gold, rows], fi) => {
@@ -738,14 +742,35 @@ function renderFlasks() {
     <div class="tw"><table><thead><tr><th>Type</th><th>Made from</th><th class="n">#</th><th>Gathered</th><th>Location</th>
     <th class="n">#</th><th>Hunted</th><th>Mob</th><th>NPC</th></tr></thead><tbody>${rows.map((r, ti) => {
       const [type, color] = TYPES[ti], c = (i, f) => ed(`${p}${type}/${f}`, r[i]);
-      return `<tr data-type="${type}"${flaskType !== "All" && flaskType !== type ? " hidden" : ""}>
+      const text = [type, prev ? `Flask of ${prev} ${type}` : "", `${size} Flask`,
+        ...FLASK_FIELDS.map((f, i) => val(`${p}${type}/${f}`, r[i]))].join(" ").toLowerCase();
+      return `<tr data-type="${type}" data-text="${esc(text)}">
       <td class="strong" style="white-space:nowrap"><span class="sw" style="background:${color}"></span>${type}</td>
       <td class="${prev ? "" : "dim"}">${prev ? `Flask of ${prev} ${type}` : "–"}</td>
       <td class="n">${c(1, "gathered-n")}</td><td>${c(0, "gathered")}</td><td class="dim">${c(2, "location")}</td>
       <td class="n">${c(4, "hunted-n")}</td><td>${c(3, "hunted")}</td><td class="dim">${c(5, "mob")}</td><td>${c(6, "npc")}</td></tr>`;
     }).join("")}</tbody></table></div></div>`;
   }).join("");
+  applyFlaskFilter();
 }
+// type button and search box together; a size with no matching row is hidden whole
+function applyFlaskFilter() {
+  const q = flaskFilter.value.trim().toLowerCase();
+  let any = false;
+  flaskTables.querySelectorAll(".block").forEach(block => {
+    let shown = 0;
+    block.querySelectorAll("tr[data-type]").forEach(tr => {
+      tr.hidden = (flaskType !== "All" && tr.dataset.type !== flaskType) || (q && !tr.dataset.text.includes(q));
+      if (!tr.hidden) shown++;
+    });
+    block.hidden = !shown;
+    if (shown) any = true;
+  });
+  const empty = document.getElementById("flask-empty");
+  empty.hidden = any;
+  empty.textContent = `Nothing matches "${flaskFilter.value.trim()}"${flaskType !== "All" ? ` among ${flaskType} flasks` : ""}.`;
+}
+flaskFilter.addEventListener("input", applyFlaskFilter);
 const chips = document.getElementById("flask-chips");
 ["All", ...TYPES.map(t => t[0])].forEach((t, i) => {
   const b = document.createElement("button");
@@ -754,7 +779,7 @@ const chips = document.getElementById("flask-chips");
   b.addEventListener("click", () => {
     flaskType = t;
     chips.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b));
-    flaskTables.querySelectorAll("tr[data-type]").forEach(tr => tr.hidden = t !== "All" && tr.dataset.type !== t);
+    applyFlaskFilter();
   });
   chips.appendChild(b);
 });
