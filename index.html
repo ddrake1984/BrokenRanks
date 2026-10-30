@@ -109,6 +109,11 @@ tr.crust-top td { border-top: 1px solid var(--muted); }
 .timer.wait { color: var(--listen); border-color: var(--listen); }
 .timer.open { color: var(--open); border-color: var(--open); }
 .timer.up { color: var(--muted); border-color: var(--muted); }
+.th-btn { font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; background: none; border: 0;
+  padding: 0; cursor: pointer; border-bottom: 1px dotted var(--muted); }
+.th-btn:hover { color: var(--fg); }
+.th-btn[aria-pressed="true"] { color: var(--listen); border-bottom-color: var(--listen); }
+.th-btn[aria-pressed="true"]::after { content: " · running"; }
 .timer small { font: 400 .7rem var(--body); color: var(--muted); margin-left: 6px; }
 body.editing .ed { cursor: text; border-bottom: 1px dotted var(--muted); }
 body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen); }
@@ -160,7 +165,7 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
     </div>
     <div class="tw">
       <table>
-        <thead><tr><th>Champion</th><th class="n">Respawn</th><th class="n">Variance</th><th class="n">Window</th><th>Timer</th><th>Area found in</th></tr></thead>
+        <thead><tr><th>Champion</th><th class="n">Respawn</th><th class="n">Variance</th><th class="n">Window</th><th><button class="th-btn" id="timer-filter" type="button" aria-pressed="false" title="Show only champions with a running timer">Timer</button></th><th>Area found in</th></tr></thead>
         <tbody id="champ-body"></tbody>
       </table>
       <p class="empty" id="champ-empty" hidden>No champion, set or area matches that filter.</p>
@@ -587,17 +592,29 @@ function renderChampions() {
   applyFilter();
   tickTimers();
 }
+// runningOnly: the Timer heading was clicked, so only champions with a running timer show
+let runningOnly = false;
 function applyFilter() {
   const q = champFilter.value.trim().toLowerCase();
   const shown = new Set();
   champBody.querySelectorAll("tr:not(.grp)").forEach(tr => {
-    tr.hidden = q && !tr.dataset.text.includes(q);
-    if (!tr.hidden) shown.add(tr.dataset.group);
+    const t = tr.querySelector(".timer");
+    const hide = (q && !tr.dataset.text.includes(q)) || (runningOnly && !(t && t.classList.length > 1));
+    if (tr.hidden !== !!hide) tr.hidden = !!hide;
+    if (!hide) shown.add(tr.dataset.group);
   });
-  champBody.querySelectorAll("tr.grp").forEach(tr => tr.hidden = !shown.has(tr.dataset.group));
-  document.getElementById("champ-empty").hidden = shown.size > 0;
+  champBody.querySelectorAll("tr.grp").forEach(tr => { const h = !shown.has(tr.dataset.group); if (tr.hidden !== h) tr.hidden = h; });
+  const empty = document.getElementById("champ-empty");
+  empty.hidden = shown.size > 0;
+  empty.textContent = runningOnly && !q ? "No timers are running. Click the Timer heading again to show every champion."
+    : "No champion, set or area matches that filter.";
 }
 champFilter.addEventListener("input", applyFilter);
+document.getElementById("timer-filter").addEventListener("click", e => {
+  runningOnly = !runningOnly;
+  e.currentTarget.setAttribute("aria-pressed", runningOnly);
+  applyFilter();
+});
 
 /* respawn timers: shared (in the store, PIN needed) or this browser's own; the newer one shows */
 const TIMER_STORE = "brokenranks-timers";
@@ -630,6 +647,7 @@ function tickTimers() {
     if (b.className !== cls) b.className = cls;
     if (b.innerHTML !== text) b.innerHTML = text;
   });
+  if (runningOnly) applyFilter(); // a timer that runs out drops off the running list
 }
 async function timerWrite(k, killedAt) {
   const r = await fetch(API + "/api/edits", {
