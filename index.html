@@ -102,7 +102,6 @@ tr.crust-top td { border-top: 1px solid var(--muted); }
 .editbar form { display: flex; flex-wrap: wrap; gap: 8px; }
 #edit-status { color: var(--muted); font-size: .9rem; }
 #edit-status.warn { color: var(--clash); }
-.ed.edited { color: var(--listen); }
 body.editing .ed { cursor: text; border-bottom: 1px dotted var(--muted); }
 body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen); }
 .cinput { font: 500 .9rem var(--body); color: var(--fg); background: var(--bg); border: 1px solid var(--listen);
@@ -125,7 +124,7 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
       <button class="act" type="submit">Unlock</button>
       <button class="act" id="pin-cancel" type="button">Cancel</button>
     </form>
-    <span id="edit-status" role="status">Values shown in gold have been corrected. Hover one to see the original.</span>
+    <span id="edit-status" role="status"></span>
   </div>
 
   <!-- KEY BINDINGS -->

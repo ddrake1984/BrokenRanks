@@ -13,7 +13,7 @@ reached, the page shows the defaults.
 
 - Anyone can read. Only the PIN holder can save: **Unlock editing**, enter the PIN, then click any
   underlined value. Enter saves for everyone, Escape cancels, an empty value restores the original.
-- Corrected values show in gold; hover one to see the original.
+- Corrected values look like any other; hover one to see the original.
 - Lists (areas, set names) are edited separated by semicolons.
 
 ### Worker
