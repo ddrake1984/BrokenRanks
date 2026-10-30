@@ -1,4 +1,4 @@
-# BrokenRanks Settings
+# BrokenRanks Tools
 
 A single-file reference page for Broken Ranks, live at https://ddrake1984.github.io/BrokenRanks/.
 

@@ -1,5 +1,5 @@
 /**
- * BrokenRanks Settings — shared edits API.
+ * BrokenRanks Tools — shared edits API.
  *
  * The page lives on GitHub Pages; this Worker only stores the corrections
  * laid over its built-in tables, so every viewer sees the same values.
