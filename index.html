@@ -471,6 +471,7 @@ pinForm.addEventListener("submit", async e => {
   try {
     const r = await fetch(API + "/api/check", { method: "POST", headers: { "x-edit-pin": tryPin } });
     if (r.status === 401) { note("That PIN was refused.", true); pinInput.select(); return; }
+    if (r.status === 503) { note("Editing isn't set up yet: the server has no PIN.", true); return; }
     if (!r.ok) throw new Error(r.status);
     pin = tryPin;
     try { localStorage.setItem(PIN_STORE, pin); } catch (e) {}
