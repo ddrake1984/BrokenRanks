@@ -16,6 +16,16 @@ reached, the page shows the defaults.
 - Corrected values look like any other; hover one to see the original.
 - Lists (areas, set names) are edited separated by semicolons.
 
+## Respawn timers
+
+Each champion has a **Start** button: click it when the champion dies. It counts down to the earliest
+respawn (amber), then shows how long the respawn window stays open (green), then "should be up" for an
+hour. Click again to restart, right-click to clear.
+
+With editing unlocked, a timer is stored in the Worker (`timers/…` keys) and everyone sees it; other
+open pages pick it up within 30 seconds. Without the PIN, a timer lives only in that browser. When
+both exist, the newer one shows, tagged "mine" or "shared".
+
 ### Worker
 
 API at `https://brokenranks-edits.ddrake1984.workers.dev`, callable from the GitHub Pages origin only.
