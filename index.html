@@ -3,12 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>body{margin:0}[hidden]{display:none!important}</style>
 <title>BrokenRanks Settings</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Fira+Sans+Condensed:wght@400;500&family=Fira+Mono:wght@500&display=swap">
 <style>
-/* Layout: dark game-menu panel, sections flow into 1-3 columns; each row is label + key slot. Single dark look on purpose, matching the in-game settings screen. */
+/* Layout: dark game-menu panel with tabs; sections flow into 1-3 columns, reference tables scroll sideways in their own frame. Single dark look on purpose, matching the in-game settings screen. */
 :root {
   --bg: #0f0f10;
   --panel: #19191b;
@@ -19,24 +17,38 @@
   --slot-hover: #4a4a50;
   --listen: #c9a24a;
   --clash: #b5473a;
+  --bronze: #c48a68;
+  --silver: #b9bdc6;
+  --gold: #d6b04a;
   --display: "Cinzel", Georgia, serif;
   --body: "Fira Sans Condensed", "Arial Narrow", system-ui, sans-serif;
   --mono: "Fira Mono", ui-monospace, Consolas, monospace;
   color-scheme: dark;
 }
-body { background: var(--bg); color: var(--fg); font: 15px/1.4 var(--body); }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.4 var(--body); }
 .wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 48px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
-h1 { font: 600 1.7rem/1.1 var(--display); letter-spacing: .04em; margin: 0; text-wrap: balance; }
-.hint { color: var(--muted); margin: 6px 0 0; max-width: 62ch; }
+h1 { font: 600 1.7rem/1.1 var(--display); letter-spacing: .04em; margin: 0 0 18px; text-wrap: balance; }
+.bar { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 16px; margin-bottom: 18px; }
+.hint { color: var(--muted); margin: 0; max-width: 66ch; }
 .tools { display: flex; flex-wrap: wrap; gap: 8px; }
-button.act { font: 500 .85rem var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--fg);
+button.act, .chip { font: 500 .85rem var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--fg);
   background: var(--panel); border: 1px solid var(--line); border-radius: 3px; padding: 7px 12px; cursor: pointer; }
-button.act:hover { border-color: var(--muted); }
-button.act:focus-visible, .slot:focus-visible { outline: 2px solid var(--listen); outline-offset: 2px; }
+button.act:hover, .chip:hover { border-color: var(--muted); }
+.chip[aria-pressed="true"] { border-color: var(--listen); color: var(--listen); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--listen); outline-offset: 2px; }
+
+/* tabs */
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
+.tab { font: 600 .95rem var(--display); letter-spacing: .05em; color: var(--muted); background: none;
+  border: 1px solid transparent; border-bottom: 0; padding: 9px 16px; margin-bottom: -1px; cursor: pointer; }
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--fg); background: var(--panel); border-color: var(--line); }
+
+/* key bindings */
 .grid { columns: 3 330px; column-gap: 28px; }
-section { break-inside: avoid; background: var(--panel); border: 1px solid var(--line); padding: 14px 16px 12px; margin-bottom: 20px; }
+section.keys { break-inside: avoid; background: var(--panel); border: 1px solid var(--line); padding: 14px 16px 12px; margin-bottom: 20px; }
 h2 { font: 600 1.05rem var(--display); letter-spacing: .05em; margin: 0 0 8px; }
 .row { display: grid; grid-template-columns: minmax(0, 1fr) 118px; align-items: center; gap: 12px; padding: 3px 0; }
 .row label { min-width: 0; }
@@ -54,30 +66,149 @@ h2 { font: 600 1.05rem var(--display); letter-spacing: .05em; margin: 0 0 8px; }
 .legend i { display: inline-block; width: 22px; height: 12px; vertical-align: -1px; margin-right: 6px; background: var(--slot); border: 1px solid; }
 #status { min-height: 1.4em; color: var(--muted); font-size: .9rem; margin-top: 8px; }
 #status.warn { color: var(--clash); }
+
+/* reference tables */
+.block { margin-bottom: 28px; }
+.block > h2 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.block > h2 small { font: 400 .85rem var(--body); letter-spacing: 0; color: var(--muted); }
+.tw { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th { font: 500 .72rem var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+  text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: bottom; }
+td { padding: 6px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+.n { text-align: right; font-family: var(--mono); font-size: .85rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.c { text-align: center; }
+.dim { color: var(--muted); }
+.strong { font-weight: 500; }
+td.lines { white-space: pre-line; }
+tr.grp td { background: var(--bg); padding: 10px; }
+tr.grp .setname { font: 600 .95rem var(--display); letter-spacing: .04em; }
+tr.grp .sets { color: var(--muted); font-size: .85rem; }
+.band { border-left: 1px solid var(--line); }
+th.band, td.band { padding-left: 14px; }
+tr.crust-top td { border-top: 1px solid var(--muted); }
+.crust { font: 600 .85rem var(--display); letter-spacing: .05em; }
+.crust.bronze { color: var(--bronze); } .crust.silver { color: var(--silver); } .crust.gold { color: var(--gold); }
+.lvl { font-family: var(--mono); color: var(--muted); font-size: .8rem; }
+.notes { color: var(--muted); font-size: .88rem; margin: 10px 0 0; padding-left: 18px; max-width: 70ch; }
+.filter { font: 15px var(--body); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 3px;
+  padding: 7px 10px; width: min(320px, 100%); }
+.filter::placeholder { color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sw { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; box-shadow: 0 0 0 1px var(--line); }
+.empty { color: var(--muted); padding: 16px; }
+.cols2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr)); gap: 0 28px; }
+.cols2 > * { min-width: 0; }
 </style>
 </head>
 <body>
-
 <div class="wrap">
-  <header>
-    <div>
-      <h1>BrokenRanks Settings</h1>
+  <h1>BrokenRanks Settings</h1>
+  <nav class="tabs" role="tablist" aria-label="Pages">
+    <button class="tab" role="tab" id="tab-keys" aria-controls="keys" type="button">Key bindings</button>
+    <button class="tab" role="tab" id="tab-champions" aria-controls="champions" type="button">Champions</button>
+    <button class="tab" role="tab" id="tab-flasks" aria-controls="flasks" type="button">Flasks</button>
+    <button class="tab" role="tab" id="tab-shards" aria-controls="shards" type="button">Shards</button>
+  </nav>
+
+  <!-- KEY BINDINGS -->
+  <div role="tabpanel" id="keys" aria-labelledby="tab-keys">
+    <div class="bar">
       <p class="hint">Click a key slot, then press the key you want. Modifiers alone (Shift, Ctrl, Alt) bind when released. Right-click a slot to clear it to "-". Changes are kept in this browser.</p>
+      <div class="tools">
+        <button class="act" id="copy" type="button">Copy as text</button>
+        <button class="act" id="reset" type="button">Reset to defaults</button>
+      </div>
     </div>
-    <div class="tools">
-      <button class="act" id="copy" type="button">Copy as text</button>
-      <button class="act" id="reset" type="button">Reset to defaults</button>
+    <div class="legend">
+      <span><i style="border-color:var(--muted)"></i>Changed from default</span>
+      <span><i style="border-color:var(--clash)"></i>Same key used twice in one section</span>
     </div>
-  </header>
-  <div class="legend">
-    <span><i style="border-color:var(--muted)"></i>Changed from default</span>
-    <span><i style="border-color:var(--clash)"></i>Same key used twice in one section</span>
+    <div class="grid" id="grid"></div>
+    <p id="status" role="status"></p>
   </div>
-  <div class="grid" id="grid"></div>
-  <p id="status" role="status"></p>
+
+  <!-- CHAMPIONS -->
+  <div role="tabpanel" id="champions" aria-labelledby="tab-champions" hidden>
+    <div class="bar">
+      <p class="hint">Respawn variance is a random number of minutes added to the respawn time. The Rat King (90 + 30) can come back anywhere from 90 to 120 minutes after the previous one was killed or disappeared.</p>
+      <input class="filter" id="champ-filter" type="search" placeholder="Filter by champion, set or area" aria-label="Filter champions">
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Champion</th><th class="n">Respawn</th><th class="n">Variance</th><th class="n">Window</th><th>Area found in</th></tr></thead>
+        <tbody id="champ-body"></tbody>
+      </table>
+      <p class="empty" id="champ-empty" hidden>No champion, set or area matches that filter.</p>
+    </div>
+  </div>
+
+  <!-- FLASKS -->
+  <div role="tabpanel" id="flasks" aria-labelledby="tab-flasks" hidden>
+    <div class="bar">
+      <p class="hint">Each flask above Minor needs the flask one size down, plus one gathered and one hunted ingredient. Pick a type to follow its chain through all four sizes.</p>
+      <div class="chips" id="flask-chips"></div>
+    </div>
+    <div id="flask-tables"></div>
+  </div>
+
+  <!-- SHARDS -->
+  <div role="tabpanel" id="shards" aria-labelledby="tab-shards" hidden>
+    <div class="cols2">
+      <div class="block">
+        <h2>Crust cost <small>shards per step, running total in brackets</small></h2>
+        <div class="tw"><table id="crust-cost"></table></div>
+      </div>
+      <div class="block">
+        <h2>Gear bonuses <small>by crust</small></h2>
+        <div class="tw"><table id="crust-bonus"></table></div>
+        <ul class="notes">
+          <li>Epics gain 2× the weapon damage bonus.</li>
+          <li>Rank II and III legendaries have an extra drif slot from Gold I onward.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="block">
+      <h2>Shattering <small>shards yielded per item; +Inh. is the base × 1.3, rounded up</small></h2>
+    </div>
+    <div class="block">
+      <h2>Synergetic</h2>
+      <div class="tw" style="max-width:520px"><table id="shat-syn"></table></div>
+    </div>
+    <div class="block">
+      <h2>Legendary</h2>
+      <div class="tw"><table id="shat-leg"></table></div>
+    </div>
+    <div class="block">
+      <h2>Set</h2>
+      <div class="tw"><table id="shat-set"></table></div>
+    </div>
+  </div>
 </div>
 
 <script>
+/* ---------- tabs ---------- */
+const TABS = ["keys", "champions", "flasks", "shards"];
+function showTab(name) {
+  if (!TABS.includes(name)) name = "keys";
+  TABS.forEach(t => {
+    document.getElementById(t).hidden = t !== name;
+    const b = document.getElementById("tab-" + t);
+    b.setAttribute("aria-selected", t === name);
+    b.tabIndex = t === name ? 0 : -1;
+  });
+}
+TABS.forEach(t => document.getElementById("tab-" + t).addEventListener("click", () => {
+  showTab(t);
+  history.replaceState(null, "", "#" + t);
+}));
+window.addEventListener("hashchange", () => showTab(location.hash.slice(1)));
+showTab(location.hash.slice(1));
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = n => n.toLocaleString("en-US");
+
+/* ---------- key bindings ---------- */
 const DEFAULTS = [
   ["Windows", [
     ["Backpack","E"],["Skills","S"],["Tactics","-"],["Attributes","-"],["Achievements","-"],["Quests","Q"],
@@ -114,14 +245,14 @@ function keyName(e) {
     .replace("Multiply", "*").replace("Divide", "/").replace("Decimal", ".").toUpperCase();
   if (/^Digit\d$/.test(e.code)) return e.code.slice(5);
   if (/^Key[A-Z]$/.test(e.code)) return e.code.slice(3);
-  const n = NAMES[e.key] ?? (e.key.length === 1 ? e.key.toUpperCase() : e.key.toUpperCase());
-  return n;
+  return NAMES[e.key] ?? e.key.toUpperCase();
 }
 const MODS = { Shift: "SHIFT", Control: "CTRL", Alt: "ALT" };
 
 const grid = document.getElementById("grid");
 DEFAULTS.forEach(([s, rows]) => {
   const sec = document.createElement("section");
+  sec.className = "keys";
   sec.innerHTML = `<h2>${s}</h2>`;
   rows.forEach(([a, , fixed]) => {
     const row = document.createElement("div");
@@ -143,6 +274,7 @@ const slots = [...document.querySelectorAll(".slot")];
 const status = document.getElementById("status");
 const say = (t, warn) => { status.textContent = t; status.classList.toggle("warn", !!warn); };
 
+let listening = null, pendingMod = null;
 function render() {
   const seen = {};
   slots.forEach(b => {
@@ -158,8 +290,6 @@ function render() {
     b.classList.toggle("clash", v !== "-" && seen[b.dataset.section + "|" + v].length > 1);
   });
 }
-
-let listening = null, pendingMod = null;
 function stop() {
   if (!listening) return;
   listening.classList.remove("listening");
@@ -215,6 +345,223 @@ document.getElementById("copy").addEventListener("click", () => {
     () => say("Copy was blocked by this browser.", true));
 });
 render();
+
+/* ---------- champions ---------- */
+// [label, sets, [[champion, respawn min, variance min, areas], ...]]
+const CHAMPIONS = [
+  [null, ["Shackles of Sleep", "Reff's Remnants"], [
+    ["Rat King", 90, 30, "Caves under the Marshes|Caves under the Towers"],
+    ["Acerodon", 60, 10, "Caves under the Marshes|Caves under the Towers|Forgotten Corridor|Lizard Cemetery"],
+    ["Kosior", 25, 5, "Southern Cave"],
+    ["Kruczy", 25, 5, "Southern Cave"],
+    ["Harlair", 60, 15, "Caves under the Border|Castle Outskirts"],
+    ["Orthal", 40, 20, "Caves under the Border|Castle Outskirts"],
+    ["Ogruch", 20, 10, "Castle Outskirts"],
+    ["Popiel", 30, 10, "Castle Outskirts|Gastelhof Castle"],
+    ["William Tell", 45, 20, "Castle Outskirts|Gastelhof Castle"],
+    ["Cybulski", 35, 15, "Dead Settlement"],
+    ["Nielichy", 20, 8, "Dead Settlement"],
+    ["Treven", 60, 15, "Dead Settlement"]]],
+  [null, ["Lights of Tellabag"], [
+    ["Wolfhound", 60, 10, "Wolf's Den"],
+    ["Brachyura", 30, 15, "Coast"],
+    ["Tilsai the Wanderer", 60, 10, "Coast|Ship|Caves under the Towers|Caves under the Marshes"],
+    ["The Newcomer", 90, 30, "Coast"],
+    ["Wolffish", 40, 8, "Coast|Ship|Caves under the Towers|Caves under the Marshes"]]],
+  [null, ["Pinari Armour"], [
+    ["Zaimm", 20, 4, "Orc Forest|Orc Chieftain's Tent"],
+    ["Rizurul", 40, 5, "Orc Forest"],
+    ["Telek", 60, 6, "Orc Forest"]]],
+  [null, ["Butcher's Disguise"], [
+    ["Psychopath", 50, 15, "Kold Forest"],
+    ["Karol Kold", 45, 12, "Kold Forest|Bear Cave"],
+    ["Bloodsucker", 90, 10, "Bear Cave"],
+    ["Rabid Grizzly", 35, 20, "Kold Forest|Bear Cave"],
+    ["Raven Charmer", 25, 8, "Kold Forest"]]],
+  ["Level 50 sets", ["Haugur's Storm", "Blade of Balance", "Revelation of Killarasun", "Wrath of the Elements", "Sting of the Gods", "Roar of the North", "Robes of Liquid Fire"], [
+    ["Ragak the Marauder", 120, 30, "Dmorther Gorge|Ridge"],
+    ["Blizzard", 45, 20, "Dmorther Plateau"],
+    ["Mountain Tiger", 25, 15, "Dmorther Gorge|Dmorther Plateau|Massif Cave|Ridge"],
+    ["Mad Harpy", 35, 12, "Dmorther Gorge|Dmorther Plateau"],
+    ["Winter Shaman", 60, 10, "Dmorther Gorge|Massif Cave|Ridge|Kold Mountains"],
+    ["Priest of Death", "16:00", 360, "Dmorther Gorge|Dmorther Plateau|Ridge|Kold Mountains"],
+    ["Yoko", 15, 4, "Shrine"]]],
+  ["Level 100 sets", ["Vorling Armour", "Soul of the World", "Veil of Death", "Armour of the Elements", "Eye of the Gods", "Armour of Immortality", "Kiss of a Million Stars"], [
+    ["Puppeteer", 30, 10, "Frozen Lake"],
+    ["Nightmare", 60, 15, "Frozen Lake"],
+    ["Winter Troll", 30, 10, "Frozen Lake"],
+    ["Winter Troll", 30, 10, "Frozen Lake"],
+    ["Halmengir", 60, 15, "Abandoned Tower|Cave under the Waterfall|Under the Bridge"],
+    ["Olm", 120, 20, "Abandoned Tower|Cave under the Waterfall|Under the Bridge"],
+    ["Traveller", 20, 5, "Frozen Lake"],
+    ["Gnawk", 120, 60, "Cave under the Waterfall|Giants' Cave|Cave (north of the lake)"],
+    ["Blood-drinker", 60, 40, "Beirn"],
+    ["Wisp", 120, 60, "Beirn"],
+    ["Lugus's Guard / Lugus's Smith", 331, null, "Dungeons", "The two appear alternately"],
+    ["Pagan Priest", 45, 30, "Dungeons"],
+    ["Astronomer", 360, 60, "Dungeons"],
+    ["Host Yak", 60, 45, "Beirn"],
+    ["Host Yeti", 60, 45, "Slope"],
+    ["Mammoth", 120, 60, "Slope"]]]
+];
+const dur = m => m < 60 ? m + "m" : Math.floor(m / 60) + "h" + (m % 60 ? " " + (m % 60) + "m" : "");
+const champBody = document.getElementById("champ-body");
+CHAMPIONS.forEach(([label, sets, rows], gi) => {
+  const g = document.createElement("tr");
+  g.className = "grp"; g.dataset.group = gi;
+  g.innerHTML = `<td colspan="5">${label ? `<div class="setname">${label}</div><div class="sets">${sets.map(esc).join(" · ")}</div>`
+    : `<div class="setname">${sets.map(esc).join(" · ")}</div>`}</td>`;
+  champBody.appendChild(g);
+  rows.forEach(([name, t, v, areas, note]) => {
+    const tr = document.createElement("tr");
+    tr.dataset.group = gi;
+    tr.dataset.text = [name, label, ...sets, areas].join(" ").toLowerCase();
+    const daily = typeof t === "string";
+    const respawn = daily ? `${t} daily` : `${t} min`;
+    const window_ = daily ? `${t}–22:00` : v == null ? dur(t) : `${dur(t)} – ${dur(t + v)}`;
+    tr.innerHTML = `<td class="strong">${esc(name)}${note ? `<div class="dim" style="font-size:.8rem;font-weight:400">${note}</div>` : ""}</td>
+      <td class="n">${respawn}</td><td class="n">${v == null ? "–" : v + " min"}</td><td class="n">${window_}</td>
+      <td class="lines">${esc(areas.split("|").join("\n"))}</td>`;
+    champBody.appendChild(tr);
+  });
+});
+document.getElementById("champ-filter").addEventListener("input", e => {
+  const q = e.target.value.trim().toLowerCase();
+  const shown = new Set();
+  champBody.querySelectorAll("tr:not(.grp)").forEach(tr => {
+    tr.hidden = q && !tr.dataset.text.includes(q);
+    if (!tr.hidden) shown.add(tr.dataset.group);
+  });
+  champBody.querySelectorAll("tr.grp").forEach(tr => tr.hidden = !shown.has(tr.dataset.group));
+  document.getElementById("champ-empty").hidden = shown.size > 0;
+});
+
+/* ---------- flasks ---------- */
+const TYPES = [["Dexterity", "#4cc3d4"], ["Knowledge", "#dcd8cf"], ["Power", "#d8c03a"], ["Strength", "#c9705f"],
+  ["Stamina", "#5cbd4c"], ["Mana", "#5f88cc"], ["Life", "#dc5a50"], ["Destruction", "#5d5d63"]];
+// per size: [name, ranks, gold, rows in TYPES order: [gathered, n, location, hunted, n, mob, npc]]
+const FLASKS = [
+  ["Minor", "I–III", 500, [
+    ["Swamp Weed", 4, "Swamp", "Undead Bone Marrow", 2, "Skeletons", "Daria"],
+    ["Ancient Energy", 3, "Swamp", "Venomous Fangs", 3, "Spiders", "Daria"],
+    ["Spices", 5, "Hamlet near Trentis", "Shaman Scroll", 1, "Goblin Shaman", "Tizemlin"],
+    ["Spider Glue", 2, "Bandit Forest", "Mastiff Heart", 3, "Mastiff", "Tizemlin"],
+    ["Menthalis", 4, "Hamlet near Trentis", "Vandal Blood", 2, "Vandal", "Somnus"],
+    ["Valerian", 4, "Fishermen Village", "Berries", 2, "Zed", "Somnus"],
+    ["Marsh-Mallow", 3, "Forlorn Settlement", "Liquid of Rush", 3, "Rascal", "Leila"],
+    ["Linen", 2, "Trentis", "Mongrel Tendon", 4, "Dog, Mongrel", "Leila"]]],
+  ["Medium", "IV–VI", 1500, [
+    ["Foreign Stone", 3, "Underground Lake", "Seagull Feather", 3, "Seagull", "Zvieya"],
+    ["Cave Water", 4, "Caves under the Marsh", "Old Book", 2, "Castaway", "Zvieya"],
+    ["Remains of Magic", 2, "Castle Dungeon", "Bad Wolf Tendon", 3, "Bad White Wolf", "Miranda"],
+    ["Bottle of Seawater", 5, "Shore", "Imperial Spaulder", 1, "Imperial Knight", "Miranda"],
+    ["Aegustahephium's Bark", 3, "Caves under the Marsh", "Worker Heart", 3, "Landau's Worker", "Aegustahephium"],
+    ["Glowing Fish", 4, "Caves under the Towers", "Mosquito Blood", 2, "Mosquitos", "Aegustahephium"],
+    ["Leaf of Night", 2, "Wolf Den", "Black Wolf Bones", 4, "Black Wolf", "Veela"],
+    ["Trametes", 3, "Druid Village", "Fallen Knight Heart", 3, "Fallen Knight", "Veela"]]],
+  ["Major", "VII–IX", 3000, [
+    ["Khemenak Lava", 2, "Khold Forest", "Dragon Servant Spike", 5, "Dragon Servant", "First Priest"],
+    ["Nanacatl Mushrooms", 5, "Khold Forest", "Lizard Brain", 2, "Lizards", "First Priest"],
+    ["Raw Mantilum Root", 4, "Bear Cave", "Forest Spirit Powder", 3, "Forest Spirit", "Noll"],
+    ["Aragonite", 2, "Bear Cave", "Bee Venom", 4, "Enraged Bees", "Noll"],
+    ["Khold Water", 4, "Bear Cave", "Poacher Poison", 2, "Poachers", "Neilin"],
+    ["Pinari", 3, "Orc Forest", "Druid Necklace", 3, "Druids", "Neilin"],
+    ["Orc Herb", 5, "Orc Forest", "Resin", 2, "Treetures", "Rentor"],
+    ["Burning Water", 4, "Hole", "Bat Brain", 2, "Bats", "Rentor"]]],
+  ["Enormous", "X–XII", 5000, [
+    ["Bones of the Fallen", 4, "Abandoned Tower", "Shaman Head", 3, "Orc Shamans", "Enna"],
+    ["Vorling Dust", 3, "Frozen Lake", "Blutter Fang", 4, "Blutter", "Enna"],
+    ["Asphodel Fruit", 3, "Dmorther Garrison", "Sphere of Power", 4, "Khold Priest", "Daron"],
+    ["Claw of the Wild", 2, "Cave (Dmorther Garrison)", "Bear Heart", 5, "Grizzly", "Daron"],
+    ["Carrion Beetle", 6, "Cave in the Mountains", "Tiger Tendon", 2, "White Tiger", "Tinmer"],
+    ["Harpy Feather", 3, "Plateau", "Burning Moonshine", 4, "Khold", "Tinmer"],
+    ["Enoki", 4, "Frozen Lake", "Orc Amulet", 3, "Orcs", "Huncwyl"],
+    ["Pinaceae Root", 5, "Dmorther Garrison", "Cursed Claw", 2, "Vampiria", "Huncwyl"]]]
+];
+const flaskTables = document.getElementById("flask-tables");
+FLASKS.forEach(([size, ranks, gold, rows], fi) => {
+  const prev = fi ? FLASKS[fi - 1][0] : null;
+  const block = document.createElement("div");
+  block.className = "block";
+  block.innerHTML = `<h2>${size} Flask <small>ranks ${ranks} · ${fmt(gold)} gold</small></h2>
+    <div class="tw"><table><thead><tr><th>Type</th><th>Made from</th><th class="n">#</th><th>Gathered</th><th>Location</th>
+    <th class="n">#</th><th>Hunted</th><th>Mob</th><th>NPC</th></tr></thead><tbody>${rows.map(([g, gn, loc, h, hn, mob, npc], ti) =>
+    `<tr data-type="${TYPES[ti][0]}"><td class="strong" style="white-space:nowrap"><span class="sw" style="background:${TYPES[ti][1]}"></span>${TYPES[ti][0]}</td>
+    <td class="${prev ? "" : "dim"}">${prev ? `Flask of ${prev} ${TYPES[ti][0]}` : "–"}</td>
+    <td class="n">${gn}</td><td>${esc(g)}</td><td class="dim">${esc(loc)}</td>
+    <td class="n">${hn}</td><td>${esc(h)}</td><td class="dim">${esc(mob)}</td><td>${esc(npc)}</td></tr>`).join("")}</tbody></table></div>`;
+  flaskTables.appendChild(block);
+});
+const chips = document.getElementById("flask-chips");
+["All", ...TYPES.map(t => t[0])].forEach((t, i) => {
+  const b = document.createElement("button");
+  b.className = "chip"; b.type = "button"; b.textContent = t;
+  b.setAttribute("aria-pressed", i === 0);
+  b.addEventListener("click", () => {
+    chips.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b));
+    flaskTables.querySelectorAll("tr[data-type]").forEach(tr => tr.hidden = t !== "All" && tr.dataset.type !== t);
+  });
+  chips.appendChild(b);
+});
+
+/* ---------- shards ---------- */
+const BANDS = ["I–III", "IV–VI", "VII–IX", "X–XII"];
+const CRUSTS = ["Bronze", "Silver", "Gold"];
+const LV = ["I", "II", "III"];
+// shard cost of each step, per band, in order Bronze I..Gold III
+const STEPS = [
+  [0, 5, 8, 12, 20, 30, 50, 100, 250],
+  [0, 30, 40, 60, 100, 150, 250, 500, 1250],
+  [0, 150, 200, 300, 500, 750, 1250, 2500, 6500],
+  [0, 650, 1000, 1500, 2500, 4000, 6500, 12500, 30000]];
+const BONUS = [
+  ["+0%", "+0%", "-", "-", "-", "-"], ["+3%", "+1.5%", "-", "-", "-", "-"], ["+6%", "+3%", "-", "-", "-", "-"],
+  ["+10%", "+5%", "+10%", "+5%", "-", "-"], ["+15%", "+7.5%", "+15%", "+10%", "-", "-"], ["+20%", "+10%", "+25%", "+20%", "-", "-"],
+  ["+25%", "+12.5%", "+50%", "+30%", "+3%", "+1"], ["+35%", "+17.5%", "+80%", "+50%", "+8%", "+2"], ["+50%", "+25%", "+100%", "+75%", "+15%", "+4"]];
+const ESS = [[1, 5, 25], [2, 10, 50], [3, 15, 75], [4, 20, 100]]; // essence required, per band then crust
+const LEG_BASE = [
+  [3, 5, 8, 12, 20, 30, 50, 100, 250],
+  [15, 20, 40, 60, 100, 150, 250, 500, 1250],
+  [75, 100, 200, 300, 500, 750, 1250, 2500, 6500],
+  [300, 500, 1000, 1500, 2500, 4000, 6500, 12500, 30000]];
+const SET_BASE = [
+  [5, 8, 12, 18, 30, 45, 75, 150, 350],
+  [20, 30, 50, 100, 150, 250, 400, 750, 1800],
+  [90, 120, 250, 450, 750, 1100, 2000, 4000, 9000],
+  [350, 550, 1200, 2200, 4000, 6000, 10000, 20000, 45000]];
+const inh = b => Math.ceil(b * 13 / 10);
+
+const crustCells = i => {
+  const c = Math.floor(i / 3), l = i % 3;
+  return (l === 0 ? `<td rowspan="3" class="crust ${CRUSTS[c].toLowerCase()}">${CRUSTS[c]}</td>` : "") + `<td class="lvl">${LV[l]}</td>`;
+};
+const rowClass = i => i % 3 === 0 ? ' class="crust-top"' : "";
+
+document.getElementById("crust-cost").innerHTML =
+  `<thead><tr><th colspan="2" rowspan="2">Crust</th>${BANDS.map(b => `<th colspan="2" class="c band">${b}</th>`).join("")}</tr>
+  <tr>${BANDS.map(() => `<th class="n band">Step</th><th class="n">Total</th>`).join("")}</tr></thead><tbody>` +
+  [...Array(9).keys()].map(i => `<tr${rowClass(i)}>${crustCells(i)}${STEPS.map(s => {
+    const tot = s.slice(0, i + 1).reduce((a, b) => a + b, 0);
+    return `<td class="n band">${s[i] ? fmt(s[i]) : "–"}</td><td class="n dim">(${fmt(tot)})</td>`;
+  }).join("")}</tr>`).join("") + "</tbody>";
+
+document.getElementById("crust-bonus").innerHTML =
+  `<thead><tr><th colspan="2">Crust</th><th class="n">Stats &amp; Res</th><th class="n">Wpn dmg</th><th class="n">Upgrades</th><th class="n">Orb</th><th class="n">Drif</th><th class="n">Drif cap</th></tr></thead><tbody>` +
+  BONUS.map((r, i) => `<tr${rowClass(i)}>${crustCells(i)}${r.map(v => `<td class="n${v === "-" ? " dim" : ""}">${v === "-" ? "–" : v}</td>`).join("")}</tr>`).join("") + "</tbody>";
+
+document.getElementById("shat-syn").innerHTML =
+  `<thead><tr><th>Ranks</th><th class="n">Base</th><th class="n">+Inh.</th><th class="n">Essence</th></tr></thead><tbody>` +
+  [1, 5, 25, 125].map((b, i) => `<tr><td class="strong">${BANDS[i]}</td><td class="n dim">(${b})</td><td class="n">${inh(b)}</td><td class="n">${ESS[i][0]}</td></tr>`).join("") + "</tbody>";
+
+function shatter(el, BASE) {
+  el.innerHTML = `<thead><tr><th colspan="2" rowspan="2">Crust</th>${BANDS.map(b => `<th colspan="3" class="c band">${b}</th>`).join("")}</tr>
+    <tr>${BANDS.map(() => `<th class="n band">Base</th><th class="n">+Inh.</th><th class="n">Ess.</th>`).join("")}</tr></thead><tbody>` +
+    [...Array(9).keys()].map(i => `<tr${rowClass(i)}>${crustCells(i)}${BASE.map((band, bi) =>
+      `<td class="n dim band">(${fmt(band[i])})</td><td class="n">${fmt(inh(band[i]))}</td>` +
+      (i % 3 === 0 ? `<td class="n" rowspan="3" style="vertical-align:middle">${ESS[bi][i / 3]}</td>` : "")).join("")}</tr>`).join("") + "</tbody>";
+}
+shatter(document.getElementById("shat-leg"), LEG_BASE);
+shatter(document.getElementById("shat-set"), SET_BASE);
 </script>
 </body>
 </html>
