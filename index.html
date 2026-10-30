@@ -99,6 +99,13 @@ tr.crust-top td { border-top: 1px solid var(--muted); }
 .empty { color: var(--muted); padding: 16px; }
 .cols2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr)); gap: 0 28px; }
 .cols2 > * { min-width: 0; }
+.cname { font: inherit; font-weight: 500; color: var(--fg); background: none; border: 0; padding: 0; text-align: left;
+  border-bottom: 1px dotted var(--muted); cursor: text; }
+.cname:hover { color: var(--listen); border-bottom-color: var(--listen); }
+.cname.renamed { color: var(--listen); }
+.was { font-size: .8rem; font-weight: 400; }
+.cinput { font: 500 .9rem var(--body); color: var(--fg); background: var(--bg); border: 1px solid var(--listen);
+  border-radius: 2px; padding: 2px 6px; width: 100%; min-width: 160px; }
 </style>
 </head>
 <body>
@@ -131,9 +138,14 @@ tr.crust-top td { border-top: 1px solid var(--muted); }
   <!-- CHAMPIONS -->
   <div role="tabpanel" id="champions" aria-labelledby="tab-champions" hidden>
     <div class="bar">
-      <p class="hint">Respawn variance is a random number of minutes added to the respawn time. The Rat King (90 + 30) can come back anywhere from 90 to 120 minutes after the previous one was killed or disappeared.</p>
-      <input class="filter" id="champ-filter" type="search" placeholder="Filter by champion, set or area" aria-label="Filter champions">
+      <p class="hint">Respawn variance is a random number of minutes added to the respawn time. The Rat King (90 + 30) can come back anywhere from 90 to 120 minutes after the previous one was killed or disappeared. Click a champion's name to correct it; Enter saves, Escape cancels, and an empty name restores the original. Corrections are kept in this browser.</p>
+      <div class="tools">
+        <input class="filter" id="champ-filter" type="search" placeholder="Filter by champion, set or area" aria-label="Filter champions">
+        <button class="act" id="names-copy" type="button">Copy name fixes</button>
+        <button class="act" id="names-reset" type="button">Reset names</button>
+      </div>
     </div>
+    <p id="champ-status" class="hint" role="status" style="margin:-6px 0 12px"></p>
     <div class="tw">
       <table>
         <thead><tr><th>Champion</th><th class="n">Respawn</th><th class="n">Variance</th><th class="n">Window</th><th>Area found in</th></tr></thead>
@@ -412,28 +424,95 @@ CHAMPIONS.forEach(([label, sets, rows], gi) => {
   g.innerHTML = `<td colspan="5">${label ? `<div class="setname">${label}</div><div class="sets">${sets.map(esc).join(" · ")}</div>`
     : `<div class="setname">${sets.map(esc).join(" · ")}</div>`}</td>`;
   champBody.appendChild(g);
-  rows.forEach(([name, t, v, areas, note]) => {
+  rows.forEach(([name, t, v, areas, note], ri) => {
     const tr = document.createElement("tr");
     tr.dataset.group = gi;
-    tr.dataset.text = [name, label, ...sets, areas].join(" ").toLowerCase();
+    tr.dataset.key = gi + "/" + ri;
+    tr.dataset.orig = name;
+    tr.dataset.base = [label, ...sets, areas].join(" ");
     const daily = typeof t === "string";
     const respawn = daily ? `${t} daily` : `${t} min`;
     const window_ = daily ? `${t}–22:00` : v == null ? dur(t) : `${dur(t)} – ${dur(t + v)}`;
-    tr.innerHTML = `<td class="strong">${esc(name)}${note ? `<div class="dim" style="font-size:.8rem;font-weight:400">${note}</div>` : ""}</td>
+    tr.innerHTML = `<td class="strong"><button class="cname" type="button" title="Click to correct this name"></button><div class="was dim" hidden></div>${note ? `<div class="dim" style="font-size:.8rem;font-weight:400">${note}</div>` : ""}</td>
       <td class="n">${respawn}</td><td class="n">${v == null ? "–" : v + " min"}</td><td class="n">${window_}</td>
       <td class="lines">${esc(areas.split("|").join("\n"))}</td>`;
     champBody.appendChild(tr);
   });
 });
-document.getElementById("champ-filter").addEventListener("input", e => {
-  const q = e.target.value.trim().toLowerCase();
+
+// name corrections: { "group/row": "Corrected name" }
+const NSTORE = "brokenranks-champ-names-v1";
+let names = {};
+try { names = JSON.parse(localStorage.getItem(NSTORE)) || {}; } catch (e) {}
+const saveNames = () => { try { localStorage.setItem(NSTORE, JSON.stringify(names)); } catch (e) {} };
+const champRows = [...champBody.querySelectorAll("tr:not(.grp)")];
+const champStatus = document.getElementById("champ-status");
+const champFilter = document.getElementById("champ-filter");
+
+function paintName(tr) {
+  const fixed = names[tr.dataset.key], cur = fixed ?? tr.dataset.orig;
+  const b = tr.querySelector(".cname"), was = tr.querySelector(".was");
+  b.textContent = cur;
+  b.classList.toggle("renamed", !!fixed);
+  was.textContent = fixed ? "was: " + tr.dataset.orig : "";
+  was.hidden = !fixed;
+  tr.dataset.text = [cur, tr.dataset.orig, tr.dataset.base].join(" ").toLowerCase();
+}
+function applyFilter() {
+  const q = champFilter.value.trim().toLowerCase();
   const shown = new Set();
-  champBody.querySelectorAll("tr:not(.grp)").forEach(tr => {
+  champRows.forEach(tr => {
     tr.hidden = q && !tr.dataset.text.includes(q);
     if (!tr.hidden) shown.add(tr.dataset.group);
   });
   champBody.querySelectorAll("tr.grp").forEach(tr => tr.hidden = !shown.has(tr.dataset.group));
   document.getElementById("champ-empty").hidden = shown.size > 0;
+}
+champRows.forEach(tr => {
+  paintName(tr);
+  const b = tr.querySelector(".cname");
+  b.addEventListener("click", () => {
+    const input = document.createElement("input");
+    input.className = "cinput"; input.type = "text";
+    input.id = "rename-" + tr.dataset.key.replace("/", "-");
+    input.setAttribute("aria-label", "New name for " + tr.dataset.orig);
+    input.value = b.textContent;
+    b.hidden = true;
+    b.after(input);
+    input.focus(); input.select();
+    let done = false;
+    const finish = keep => {
+      if (done) return;
+      done = true;
+      const v = input.value.trim(), k = tr.dataset.key, before = names[k] ?? tr.dataset.orig;
+      if (keep) {
+        if (!v || v === tr.dataset.orig) delete names[k]; else names[k] = v;
+        saveNames();
+      }
+      input.remove(); b.hidden = false;
+      paintName(tr); applyFilter();
+      const after = names[k] ?? tr.dataset.orig;
+      if (keep && after !== before) champStatus.textContent = names[k] ? `${tr.dataset.orig} renamed to ${after}.` : `${after} restored to its original name.`;
+      b.focus();
+    };
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter") finish(true);
+      if (e.key === "Escape") finish(false);
+    });
+    input.addEventListener("blur", () => finish(true));
+  });
+});
+champFilter.addEventListener("input", applyFilter);
+document.getElementById("names-reset").addEventListener("click", () => {
+  names = {}; saveNames(); champRows.forEach(paintName); applyFilter();
+  champStatus.textContent = "All champion names restored to the originals.";
+});
+document.getElementById("names-copy").addEventListener("click", () => {
+  const fixes = champRows.filter(tr => names[tr.dataset.key]).map(tr => `${tr.dataset.orig} -> ${names[tr.dataset.key]}`);
+  if (!fixes.length) { champStatus.textContent = "No names have been corrected yet."; return; }
+  navigator.clipboard.writeText(fixes.join("\n")).then(
+    () => champStatus.textContent = `Copied ${fixes.length} name fix${fixes.length > 1 ? "es" : ""}.`,
+    () => champStatus.textContent = "Copy was blocked by this browser.");
 });
 
 /* ---------- flasks ---------- */
