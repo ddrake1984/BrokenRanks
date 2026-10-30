@@ -17,6 +17,7 @@
   --slot-hover: #4a4a50;
   --listen: #c9a24a;
   --clash: #b5473a;
+  --open: #6fbf5a;
   --bronze: #c48a68;
   --silver: #b9bdc6;
   --gold: #d6b04a;
@@ -102,6 +103,13 @@ tr.crust-top td { border-top: 1px solid var(--muted); }
 .editbar form { display: flex; flex-wrap: wrap; gap: 8px; }
 #edit-status { color: var(--muted); font-size: .9rem; }
 #edit-status.warn { color: var(--clash); }
+.timer { font: 500 .8rem var(--mono); font-variant-numeric: tabular-nums; color: var(--fg); background: var(--slot);
+  border: 1px solid transparent; border-radius: 2px; padding: 3px 8px; min-width: 112px; cursor: pointer; white-space: nowrap; }
+.timer:hover { background: var(--slot-hover); }
+.timer.wait { color: var(--listen); border-color: var(--listen); }
+.timer.open { color: var(--open); border-color: var(--open); }
+.timer.up { color: var(--muted); border-color: var(--muted); }
+.timer small { font: 400 .7rem var(--body); color: var(--muted); margin-left: 6px; }
 body.editing .ed { cursor: text; border-bottom: 1px dotted var(--muted); }
 body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen); }
 .cinput { font: 500 .9rem var(--body); color: var(--fg); background: var(--bg); border: 1px solid var(--listen);
@@ -147,12 +155,12 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
   <!-- CHAMPIONS -->
   <div role="tabpanel" id="champions" aria-labelledby="tab-champions" hidden>
     <div class="bar">
-      <p class="hint">Respawn variance is a random number of minutes added to the respawn time. The Rat King (90 + 30) can come back anywhere from 90 to 120 minutes after the previous one was killed or disappeared. Areas are edited as a list separated by semicolons.</p>
+      <p class="hint">Respawn variance is a random number of minutes added to the respawn time. The Rat King (90 + 30) can come back anywhere from 90 to 120 minutes after the previous one was killed or disappeared. Areas are edited as a list separated by semicolons.<br>Click <b>Start</b> when a champion dies: the timer counts down to the earliest respawn (amber), then shows how long the window stays open (green). Click again to restart, right-click to clear. With editing unlocked, timers are shared with everyone; otherwise they are yours only.</p>
       <input class="filter" id="champ-filter" type="search" placeholder="Filter by champion, set or area" aria-label="Filter champions">
     </div>
     <div class="tw">
       <table>
-        <thead><tr><th>Champion</th><th class="n">Respawn</th><th class="n">Variance</th><th class="n">Window</th><th>Area found in</th></tr></thead>
+        <thead><tr><th>Champion</th><th class="n">Respawn</th><th class="n">Variance</th><th class="n">Window</th><th>Timer</th><th>Area found in</th></tr></thead>
         <tbody id="champ-body"></tbody>
       </table>
       <p class="empty" id="champ-empty" hidden>No champion, set or area matches that filter.</p>
@@ -526,13 +534,19 @@ async function saveEdit(k, v, d) {
   } catch (err) { note("Not saved: couldn't reach the shared store.", true); }
   renderShared();
 }
-async function loadShared() {
+// quiet = a background refresh: no error message, and no redraw while a value is being edited
+async function loadShared(quiet) {
   try {
     const r = await fetch(API + "/api/edits");
     if (!r.ok) throw new Error(r.status);
-    shared = (await r.json()).edits || {};
-    renderShared();
-  } catch (e) { note("Couldn't load the shared corrections, so the built-in values are shown.", true); }
+    const next = {}, timers = {};
+    for (const [k, v] of Object.entries((await r.json()).edits || {})) (k.startsWith("timers/") ? timers : next)[k] = v;
+    globalTimers = timers;
+    const changed = JSON.stringify(next) !== JSON.stringify(shared);
+    shared = next;
+    if (changed && !(quiet && document.querySelector(".cinput"))) renderShared();
+    tickTimers();
+  } catch (e) { if (!quiet) note("Couldn't load the shared corrections, so the built-in values are shown.", true); }
 }
 function renderShared() { renderChampions(); renderFlasks(); renderShards(); }
 
@@ -544,30 +558,34 @@ function renderChampions() {
   champBody.innerHTML = CHAMPIONS.map(([label, sets, rows], gi) => {
     const sk = `champions/${gi}/sets`, setsDef = sets.join("|"), setNames = items(sk, setsDef);
     const setsCell = ed(sk, setsDef, { list: true, sep: " · " });
-    const head = `<tr class="grp" data-group="${gi}"><td colspan="5">${label
+    const head = `<tr class="grp" data-group="${gi}"><td colspan="6">${label
       ? `<div class="setname">${label}</div><div class="sets">${setsCell}</div>` : `<div class="setname">${setsCell}</div>`}</td></tr>`;
     return head + rows.map(([name, t, v, areas, remark], ri) => {
       const p = `champions/${gi}/${ri}/`;
       const daily = typeof t === "string";
       const V = v == null ? null : num(p + "variance", v);
+      const T = daily ? null : num(p + "respawn", t);
       let window_ = "–";
       if (daily) {
         const [h, m] = val(p + "respawn", t).split(":").map(Number);
         if (Number.isFinite(h) && Number.isFinite(m)) window_ = V == null ? clock(h * 60 + m) : `${clock(h * 60 + m)}–${clock(h * 60 + m + V)}`;
-      } else {
-        const T = num(p + "respawn", t);
-        if (T != null) window_ = V == null ? dur(T) : `${dur(T)} – ${dur(T + V)}`;
+      } else if (T != null) {
+        window_ = V == null ? dur(T) : `${dur(T)} – ${dur(T + V)}`;
       }
+      const timer = T == null ? `<span class="dim">–</span>`
+        : `<button class="timer" type="button" data-t="timers/champions/${gi}/${ri}" data-min="${T}" data-var="${V ?? 0}"></button>`;
       const text = [val(p + "name", name), name, label, ...setNames, ...items(p + "areas", areas)].join(" ").toLowerCase();
       return `<tr data-group="${gi}" data-text="${esc(text)}">
         <td class="strong">${ed(p + "name", name)}${remark ? `<div class="dim" style="font-size:.8rem;font-weight:400">${remark}</div>` : ""}</td>
         <td class="n">${ed(p + "respawn", t)} ${daily ? "daily" : "min"}</td>
         <td class="n">${v == null ? "–" : ed(p + "variance", v) + " min"}</td>
         <td class="n">${window_}</td>
+        <td>${timer}</td>
         <td class="lines">${ed(p + "areas", areas, { list: true })}</td></tr>`;
     }).join("");
   }).join("");
   applyFilter();
+  tickTimers();
 }
 function applyFilter() {
   const q = champFilter.value.trim().toLowerCase();
@@ -580,6 +598,76 @@ function applyFilter() {
   document.getElementById("champ-empty").hidden = shown.size > 0;
 }
 champFilter.addEventListener("input", applyFilter);
+
+/* respawn timers: shared (in the store, PIN needed) or this browser's own; the newer one shows */
+const TIMER_STORE = "brokenranks-timers";
+let globalTimers = {}, localTimers = {};
+try { localTimers = JSON.parse(localStorage.getItem(TIMER_STORE)) || {}; } catch (e) {}
+const saveLocalTimers = () => { try { localStorage.setItem(TIMER_STORE, JSON.stringify(localTimers)); } catch (e) {} };
+const unlocked = () => document.body.classList.contains("editing");
+const left = ms => {
+  const s = Math.ceil(ms / 1000), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60;
+  return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(x).padStart(2, "0");
+};
+const hhmm = t => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+function tickTimers() {
+  const now = Date.now();
+  document.querySelectorAll(".timer").forEach(b => {
+    const k = b.dataset.t, g = Number(globalTimers[k]) || 0, l = Number(localTimers[k]) || 0;
+    const at = Math.max(g, l), mine = l > g;
+    const from = at + b.dataset.min * 60000, to = from + b.dataset.var * 60000;
+    let text = "Start", cls = "timer";
+    // a finished timer stays on "should be up" for an hour, then goes back to Start
+    if (at && now < to + 3600000) {
+      if (now < from) { text = left(from - now); cls += " wait"; }
+      else if (now < to) { text = "open " + left(to - now); cls += " open"; }
+      else { text = "should be up"; cls += " up"; }
+      text += `<small>${mine ? "mine" : "shared"}</small>`;
+      b.title = `${mine ? "Your own timer" : "Shared timer"}, killed at ${hhmm(at)}. Respawns ${hhmm(from)}${to > from ? "–" + hhmm(to) : ""}. Click to restart, right-click to clear.`;
+    } else {
+      b.title = unlocked() ? "Start a shared timer for everyone" : "Start a timer in this browser only";
+    }
+    if (b.className !== cls) b.className = cls;
+    if (b.innerHTML !== text) b.innerHTML = text;
+  });
+}
+async function timerWrite(k, killedAt) {
+  const r = await fetch(API + "/api/edits", {
+    method: killedAt ? "PUT" : "DELETE",
+    headers: { "content-type": "application/json", "x-edit-pin": pin || "" },
+    body: JSON.stringify(killedAt ? { key: k, value: String(killedAt) } : { key: k }) });
+  if (r.status === 401) { forgetPin(); setEditing(false); throw new Error("The PIN was refused, so the shared timer wasn't changed. Unlock again."); }
+  if (!r.ok) throw new Error(`The shared timer wasn't changed: the store answered ${r.status}.`);
+}
+champBody.addEventListener("click", async e => {
+  const b = e.target.closest(".timer");
+  if (!b) return;
+  const k = b.dataset.t, now = Date.now();
+  if (unlocked()) {
+    try { await timerWrite(k, now); globalTimers[k] = String(now); delete localTimers[k]; saveLocalTimers(); note("Shared timer started for everyone."); }
+    catch (err) { note(err.message, true); }
+  } else {
+    localTimers[k] = now; saveLocalTimers();
+  }
+  tickTimers();
+});
+champBody.addEventListener("contextmenu", async e => {
+  const b = e.target.closest(".timer");
+  if (!b) return;
+  e.preventDefault();
+  const k = b.dataset.t;
+  delete localTimers[k]; saveLocalTimers();
+  if (globalTimers[k]) {
+    if (!unlocked()) note("That's a shared timer. Unlock editing to clear it for everyone.", true);
+    else {
+      try { await timerWrite(k, null); delete globalTimers[k]; note("Shared timer cleared."); }
+      catch (err) { note(err.message, true); }
+    }
+  }
+  tickTimers();
+});
+setInterval(tickTimers, 1000);
+setInterval(() => { if (!document.hidden) loadShared(true); }, 30000);
 
 /* ---------- flasks ---------- */
 const TYPES = [["Dexterity", "#4cc3d4"], ["Knowledge", "#dcd8cf"], ["Power", "#d8c03a"], ["Strength", "#c9705f"],

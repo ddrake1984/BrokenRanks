@@ -15,7 +15,8 @@
  */
 
 const ALLOWED_ORIGINS = ['https://ddrake1984.github.io'];
-const KEY_RE = /^(champions|flasks|shards)\/[A-Za-z0-9 _\-\/.']{1,120}$/;
+// timers/champions/<group>/<row> holds the kill time (ms since epoch) of a shared respawn timer
+const KEY_RE = /^(champions|flasks|shards|timers)\/[A-Za-z0-9 _\-\/.']{1,120}$/;
 const MAX_VALUE = 300;
 
 /* Compare without leaking the answer in how long it took. */
