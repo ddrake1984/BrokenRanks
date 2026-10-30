@@ -97,8 +97,6 @@ tr.crust-top td { border-top: 1px solid var(--muted); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .sw { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; box-shadow: 0 0 0 1px var(--line); }
 .empty { color: var(--muted); padding: 16px; }
-.cols2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr)); gap: 0 28px; }
-.cols2 > * { min-width: 0; }
 .cname { font: inherit; font-weight: 500; color: var(--fg); background: none; border: 0; padding: 0; text-align: left;
   border-bottom: 1px dotted var(--muted); cursor: text; }
 .cname:hover { color: var(--listen); border-bottom-color: var(--listen); }
@@ -166,7 +164,7 @@ tr.crust-top td { border-top: 1px solid var(--muted); }
 
   <!-- SHARDS -->
   <div role="tabpanel" id="shards" aria-labelledby="tab-shards" hidden>
-    <div class="cols2">
+    <div>
       <div class="block">
         <h2>Crust cost <small>shards per step, running total in brackets</small></h2>
         <div class="tw"><table id="crust-cost"></table></div>
