@@ -97,11 +97,14 @@ tr.crust-top td { border-top: 1px solid var(--muted); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .sw { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; box-shadow: 0 0 0 1px var(--line); }
 .empty { color: var(--muted); padding: 16px; }
-.cname { font: inherit; font-weight: 500; color: var(--fg); background: none; border: 0; padding: 0; text-align: left;
-  border-bottom: 1px dotted var(--muted); cursor: text; }
-.cname:hover { color: var(--listen); border-bottom-color: var(--listen); }
-.cname.renamed { color: var(--listen); }
-.was { font-size: .8rem; font-weight: 400; }
+/* shared corrections */
+.editbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: -8px 0 18px; }
+.editbar form { display: flex; flex-wrap: wrap; gap: 8px; }
+#edit-status { color: var(--muted); font-size: .9rem; }
+#edit-status.warn { color: var(--clash); }
+.ed.edited { color: var(--listen); }
+body.editing .ed { cursor: text; border-bottom: 1px dotted var(--muted); }
+body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen); }
 .cinput { font: 500 .9rem var(--body); color: var(--fg); background: var(--bg); border: 1px solid var(--listen);
   border-radius: 2px; padding: 2px 6px; width: 100%; min-width: 160px; }
 </style>
@@ -115,6 +118,15 @@ tr.crust-top td { border-top: 1px solid var(--muted); }
     <button class="tab" role="tab" id="tab-flasks" aria-controls="flasks" type="button">Flasks</button>
     <button class="tab" role="tab" id="tab-shards" aria-controls="shards" type="button">Shards</button>
   </nav>
+  <div class="editbar" id="editbar" hidden>
+    <button class="act" id="edit-toggle" type="button">Unlock editing</button>
+    <form id="pin-form" hidden>
+      <input class="filter" id="pin-input" type="password" autocomplete="current-password" placeholder="PIN" aria-label="Editing PIN" style="width:160px">
+      <button class="act" type="submit">Unlock</button>
+      <button class="act" id="pin-cancel" type="button">Cancel</button>
+    </form>
+    <span id="edit-status" role="status">Values shown in gold have been corrected. Hover one to see the original.</span>
+  </div>
 
   <!-- KEY BINDINGS -->
   <div role="tabpanel" id="keys" aria-labelledby="tab-keys">
@@ -136,14 +148,9 @@ tr.crust-top td { border-top: 1px solid var(--muted); }
   <!-- CHAMPIONS -->
   <div role="tabpanel" id="champions" aria-labelledby="tab-champions" hidden>
     <div class="bar">
-      <p class="hint">Respawn variance is a random number of minutes added to the respawn time. The Rat King (90 + 30) can come back anywhere from 90 to 120 minutes after the previous one was killed or disappeared. Click a champion's name to correct it; Enter saves, Escape cancels, and an empty name restores the original. Corrections are kept in this browser.</p>
-      <div class="tools">
-        <input class="filter" id="champ-filter" type="search" placeholder="Filter by champion, set or area" aria-label="Filter champions">
-        <button class="act" id="names-copy" type="button">Copy name fixes</button>
-        <button class="act" id="names-reset" type="button">Reset names</button>
-      </div>
+      <p class="hint">Respawn variance is a random number of minutes added to the respawn time. The Rat King (90 + 30) can come back anywhere from 90 to 120 minutes after the previous one was killed or disappeared. Areas are edited as a list separated by semicolons.</p>
+      <input class="filter" id="champ-filter" type="search" placeholder="Filter by champion, set or area" aria-label="Filter champions">
     </div>
-    <p id="champ-status" class="hint" role="status" style="margin:-6px 0 12px"></p>
     <div class="tw">
       <table>
         <thead><tr><th>Champion</th><th class="n">Respawn</th><th class="n">Variance</th><th class="n">Window</th><th>Area found in</th></tr></thead>
@@ -172,10 +179,7 @@ tr.crust-top td { border-top: 1px solid var(--muted); }
       <div class="block">
         <h2>Gear bonuses <small>by crust</small></h2>
         <div class="tw"><table id="crust-bonus"></table></div>
-        <ul class="notes">
-          <li>Epics gain 2× the weapon damage bonus.</li>
-          <li>Rank II and III legendaries have an extra drif slot from Gold I onward.</li>
-        </ul>
+        <ul class="notes" id="bonus-notes"></ul>
       </div>
     </div>
     <div class="block">
@@ -203,6 +207,7 @@ function showTab(name) {
   if (!TABS.includes(name)) name = "keys";
   TABS.forEach(t => {
     document.getElementById(t).hidden = t !== name;
+    document.getElementById("editbar").hidden = name === "keys";
     const b = document.getElementById("tab-" + t);
     b.setAttribute("aria-selected", t === name);
     b.tabIndex = t === name ? 0 : -1;
@@ -415,103 +420,166 @@ const CHAMPIONS = [
     ["Mammoth", 120, 60, "Slope"]]]
 ];
 const dur = m => m < 60 ? m + "m" : Math.floor(m / 60) + "h" + (m % 60 ? " " + (m % 60) + "m" : "");
-const champBody = document.getElementById("champ-body");
-CHAMPIONS.forEach(([label, sets, rows], gi) => {
-  const g = document.createElement("tr");
-  g.className = "grp"; g.dataset.group = gi;
-  g.innerHTML = `<td colspan="5">${label ? `<div class="setname">${label}</div><div class="sets">${sets.map(esc).join(" · ")}</div>`
-    : `<div class="setname">${sets.map(esc).join(" · ")}</div>`}</td>`;
-  champBody.appendChild(g);
-  rows.forEach(([name, t, v, areas, note], ri) => {
-    const tr = document.createElement("tr");
-    tr.dataset.group = gi;
-    tr.dataset.key = gi + "/" + ri;
-    tr.dataset.orig = name;
-    tr.dataset.base = [label, ...sets, areas].join(" ");
-    const daily = typeof t === "string";
-    const respawn = daily ? `${t} daily` : `${t} min`;
-    const window_ = daily ? `${t}–22:00` : v == null ? dur(t) : `${dur(t)} – ${dur(t + v)}`;
-    tr.innerHTML = `<td class="strong"><button class="cname" type="button" title="Click to correct this name"></button><div class="was dim" hidden></div>${note ? `<div class="dim" style="font-size:.8rem;font-weight:400">${note}</div>` : ""}</td>
-      <td class="n">${respawn}</td><td class="n">${v == null ? "–" : v + " min"}</td><td class="n">${window_}</td>
-      <td class="lines">${esc(areas.split("|").join("\n"))}</td>`;
-    champBody.appendChild(tr);
-  });
+
+/* ---------- shared corrections ---------- */
+// Champions, Flasks and Shards read every value through val(). A correction saved to the shared
+// store replaces that value for every viewer; deleting it brings back the built-in one.
+// Only the PIN holder can save. Key bindings never touch this.
+const API = "https://brokenranks-edits.ddrake1984.workers.dev";
+const PIN_STORE = "brokenranks-edit-pin";
+let shared = {};
+let pin = null;
+try { pin = localStorage.getItem(PIN_STORE); } catch (e) {}
+const val = (k, d) => shared[k] ?? String(d);
+const num = (k, d) => { const n = Number(val(k, d).replace(/,/g, "")); return val(k, d).trim() && Number.isFinite(n) ? n : null; };
+const items = (k, d) => val(k, d).split("|").map(s => s.trim()).filter(Boolean);
+// one editable value: o.list = "|"-separated list, o.sep = how a list is shown, o.number = format digits, o.dash = show 0 or "-" as a dash
+function ed(k, d, o = {}) {
+  const on = k in shared, v = val(k, d), n = num(k, d);
+  let shown = esc(v);
+  if (o.list) shown = esc(items(k, d).join(o.sep ?? "\n"));
+  else if (o.dash && (v === "-" || n === 0)) shown = "–";
+  else if (o.number && n != null) shown = fmt(n);
+  return `<span class="ed${on ? " edited" : ""}" data-k="${esc(k)}" data-d="${esc(d)}"${o.list ? ' data-list="1"' : ""}` +
+    `${on ? ` title="Corrected. Was: ${esc(String(d).split("|").join(", "))}"` : ""}>${shown}</span>`;
+}
+
+const editStatus = document.getElementById("edit-status");
+const editToggle = document.getElementById("edit-toggle");
+const pinForm = document.getElementById("pin-form");
+const pinInput = document.getElementById("pin-input");
+const note = (t, warn) => { editStatus.textContent = t; editStatus.classList.toggle("warn", !!warn); };
+const forgetPin = () => { pin = null; try { localStorage.removeItem(PIN_STORE); } catch (e) {} };
+function setEditing(on) {
+  document.body.classList.toggle("editing", on);
+  editToggle.textContent = on ? "Lock" : "Unlock editing";
+  editToggle.hidden = false;
+  pinForm.hidden = true;
+}
+editToggle.addEventListener("click", () => {
+  if (document.body.classList.contains("editing")) {
+    forgetPin(); setEditing(false); note("Locked. This browser no longer remembers the PIN.");
+  } else {
+    editToggle.hidden = true; pinForm.hidden = false; pinInput.value = ""; pinInput.focus();
+  }
+});
+document.getElementById("pin-cancel").addEventListener("click", () => { pinForm.hidden = true; editToggle.hidden = false; });
+pinForm.addEventListener("submit", async e => {
+  e.preventDefault();
+  const tryPin = pinInput.value;
+  note("Checking the PIN…");
+  try {
+    const r = await fetch(API + "/api/check", { method: "POST", headers: { "x-edit-pin": tryPin } });
+    if (r.status === 401) { note("That PIN was refused.", true); pinInput.select(); return; }
+    if (!r.ok) throw new Error(r.status);
+    pin = tryPin;
+    try { localStorage.setItem(PIN_STORE, pin); } catch (e) {}
+    setEditing(true);
+    note("Editing unlocked. Click any underlined value to correct it for everyone.");
+  } catch (err) { note("Couldn't reach the shared store, so the PIN can't be checked right now.", true); }
 });
 
-// name corrections: { "group/row": "Corrected name" }
-const NSTORE = "brokenranks-champ-names-v1";
-let names = {};
-try { names = JSON.parse(localStorage.getItem(NSTORE)) || {}; } catch (e) {}
-const saveNames = () => { try { localStorage.setItem(NSTORE, JSON.stringify(names)); } catch (e) {} };
-const champRows = [...champBody.querySelectorAll("tr:not(.grp)")];
-const champStatus = document.getElementById("champ-status");
-const champFilter = document.getElementById("champ-filter");
+document.addEventListener("click", e => {
+  const span = e.target.closest(".ed");
+  if (!span || !document.body.classList.contains("editing") || span.querySelector("input")) return;
+  const k = span.dataset.k, d = span.dataset.d, isList = span.dataset.list === "1";
+  const input = document.createElement("input");
+  input.className = "cinput"; input.type = "text";
+  input.id = "edit-" + k.replace(/[^a-z0-9]+/gi, "-");
+  input.setAttribute("aria-label", "Correct this value");
+  input.value = isList ? items(k, d).join("; ") : val(k, d);
+  span.replaceChildren(input);
+  input.focus(); input.select();
+  let done = false;
+  const finish = keep => {
+    if (done) return;
+    done = true;
+    let v = input.value.trim();
+    if (isList) v = v.split(";").map(s => s.trim()).filter(Boolean).join("|");
+    if (!keep || v === val(k, d)) return renderShared();
+    input.disabled = true;
+    saveEdit(k, v, d);
+  };
+  input.addEventListener("keydown", ev => {
+    if (ev.key === "Enter") finish(true);
+    if (ev.key === "Escape") finish(false);
+  });
+  input.addEventListener("blur", () => finish(true));
+});
+async function saveEdit(k, v, d) {
+  const restore = !v || v === d;
+  note("Saving…");
+  try {
+    const r = await fetch(API + "/api/edits", {
+      method: restore ? "DELETE" : "PUT",
+      headers: { "content-type": "application/json", "x-edit-pin": pin || "" },
+      body: JSON.stringify(restore ? { key: k } : { key: k, value: v }) });
+    if (r.status === 401) {
+      forgetPin(); setEditing(false);
+      note("The PIN was refused, so nothing was saved. Unlock again to keep editing.", true);
+    } else if (!r.ok) {
+      note(`Not saved: the shared store answered ${r.status}.`, true);
+    } else {
+      if (restore) delete shared[k]; else shared[k] = v;
+      note(restore ? `Back to the original for everyone: ${d.split("|").join(", ")}.` : `Saved for everyone: ${v.split("|").join(", ")}.`);
+    }
+  } catch (err) { note("Not saved: couldn't reach the shared store.", true); }
+  renderShared();
+}
+async function loadShared() {
+  try {
+    const r = await fetch(API + "/api/edits");
+    if (!r.ok) throw new Error(r.status);
+    shared = (await r.json()).edits || {};
+    renderShared();
+  } catch (e) { note("Couldn't load the shared corrections, so the built-in values are shown.", true); }
+}
+function renderShared() { renderChampions(); renderFlasks(); renderShards(); }
 
-function paintName(tr) {
-  const fixed = names[tr.dataset.key], cur = fixed ?? tr.dataset.orig;
-  const b = tr.querySelector(".cname"), was = tr.querySelector(".was");
-  b.textContent = cur;
-  b.classList.toggle("renamed", !!fixed);
-  was.textContent = fixed ? "was: " + tr.dataset.orig : "";
-  was.hidden = !fixed;
-  tr.dataset.text = [cur, tr.dataset.orig, tr.dataset.base].join(" ").toLowerCase();
+/* champions render */
+const champBody = document.getElementById("champ-body");
+const champFilter = document.getElementById("champ-filter");
+const clock = m => String(Math.floor(m / 60) % 24).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+function renderChampions() {
+  champBody.innerHTML = CHAMPIONS.map(([label, sets, rows], gi) => {
+    const sk = `champions/${gi}/sets`, setsDef = sets.join("|"), setNames = items(sk, setsDef);
+    const setsCell = ed(sk, setsDef, { list: true, sep: " · " });
+    const head = `<tr class="grp" data-group="${gi}"><td colspan="5">${label
+      ? `<div class="setname">${label}</div><div class="sets">${setsCell}</div>` : `<div class="setname">${setsCell}</div>`}</td></tr>`;
+    return head + rows.map(([name, t, v, areas, remark], ri) => {
+      const p = `champions/${gi}/${ri}/`;
+      const daily = typeof t === "string";
+      const V = v == null ? null : num(p + "variance", v);
+      let window_ = "–";
+      if (daily) {
+        const [h, m] = val(p + "respawn", t).split(":").map(Number);
+        if (Number.isFinite(h) && Number.isFinite(m)) window_ = V == null ? clock(h * 60 + m) : `${clock(h * 60 + m)}–${clock(h * 60 + m + V)}`;
+      } else {
+        const T = num(p + "respawn", t);
+        if (T != null) window_ = V == null ? dur(T) : `${dur(T)} – ${dur(T + V)}`;
+      }
+      const text = [val(p + "name", name), name, label, ...setNames, ...items(p + "areas", areas)].join(" ").toLowerCase();
+      return `<tr data-group="${gi}" data-text="${esc(text)}">
+        <td class="strong">${ed(p + "name", name)}${remark ? `<div class="dim" style="font-size:.8rem;font-weight:400">${remark}</div>` : ""}</td>
+        <td class="n">${ed(p + "respawn", t)} ${daily ? "daily" : "min"}</td>
+        <td class="n">${v == null ? "–" : ed(p + "variance", v) + " min"}</td>
+        <td class="n">${window_}</td>
+        <td class="lines">${ed(p + "areas", areas, { list: true })}</td></tr>`;
+    }).join("");
+  }).join("");
+  applyFilter();
 }
 function applyFilter() {
   const q = champFilter.value.trim().toLowerCase();
   const shown = new Set();
-  champRows.forEach(tr => {
+  champBody.querySelectorAll("tr:not(.grp)").forEach(tr => {
     tr.hidden = q && !tr.dataset.text.includes(q);
     if (!tr.hidden) shown.add(tr.dataset.group);
   });
   champBody.querySelectorAll("tr.grp").forEach(tr => tr.hidden = !shown.has(tr.dataset.group));
   document.getElementById("champ-empty").hidden = shown.size > 0;
 }
-champRows.forEach(tr => {
-  paintName(tr);
-  const b = tr.querySelector(".cname");
-  b.addEventListener("click", () => {
-    const input = document.createElement("input");
-    input.className = "cinput"; input.type = "text";
-    input.id = "rename-" + tr.dataset.key.replace("/", "-");
-    input.setAttribute("aria-label", "New name for " + tr.dataset.orig);
-    input.value = b.textContent;
-    b.hidden = true;
-    b.after(input);
-    input.focus(); input.select();
-    let done = false;
-    const finish = keep => {
-      if (done) return;
-      done = true;
-      const v = input.value.trim(), k = tr.dataset.key, before = names[k] ?? tr.dataset.orig;
-      if (keep) {
-        if (!v || v === tr.dataset.orig) delete names[k]; else names[k] = v;
-        saveNames();
-      }
-      input.remove(); b.hidden = false;
-      paintName(tr); applyFilter();
-      const after = names[k] ?? tr.dataset.orig;
-      if (keep && after !== before) champStatus.textContent = names[k] ? `${tr.dataset.orig} renamed to ${after}.` : `${after} restored to its original name.`;
-      b.focus();
-    };
-    input.addEventListener("keydown", e => {
-      if (e.key === "Enter") finish(true);
-      if (e.key === "Escape") finish(false);
-    });
-    input.addEventListener("blur", () => finish(true));
-  });
-});
 champFilter.addEventListener("input", applyFilter);
-document.getElementById("names-reset").addEventListener("click", () => {
-  names = {}; saveNames(); champRows.forEach(paintName); applyFilter();
-  champStatus.textContent = "All champion names restored to the originals.";
-});
-document.getElementById("names-copy").addEventListener("click", () => {
-  const fixes = champRows.filter(tr => names[tr.dataset.key]).map(tr => `${tr.dataset.orig} -> ${names[tr.dataset.key]}`);
-  if (!fixes.length) { champStatus.textContent = "No names have been corrected yet."; return; }
-  navigator.clipboard.writeText(fixes.join("\n")).then(
-    () => champStatus.textContent = `Copied ${fixes.length} name fix${fixes.length > 1 ? "es" : ""}.`,
-    () => champStatus.textContent = "Copy was blocked by this browser.");
-});
 
 /* ---------- flasks ---------- */
 const TYPES = [["Dexterity", "#4cc3d4"], ["Knowledge", "#dcd8cf"], ["Power", "#d8c03a"], ["Strength", "#c9705f"],
@@ -556,25 +624,29 @@ const FLASKS = [
     ["Pinaceae Root", 5, "Dmorther Garrison", "Cursed Claw", 2, "Vampiria", "Huncwyl"]]]
 ];
 const flaskTables = document.getElementById("flask-tables");
-FLASKS.forEach(([size, ranks, gold, rows], fi) => {
-  const prev = fi ? FLASKS[fi - 1][0] : null;
-  const block = document.createElement("div");
-  block.className = "block";
-  block.innerHTML = `<h2>${size} Flask <small>ranks ${ranks} · ${fmt(gold)} gold</small></h2>
+let flaskType = "All";
+function renderFlasks() {
+  flaskTables.innerHTML = FLASKS.map(([size, ranks, gold, rows], fi) => {
+    const prev = fi ? FLASKS[fi - 1][0] : null, p = `flasks/${size}/`;
+    return `<div class="block"><h2>${size} Flask <small>ranks ${ranks} · ${ed(p + "gold", gold, { number: true })} gold</small></h2>
     <div class="tw"><table><thead><tr><th>Type</th><th>Made from</th><th class="n">#</th><th>Gathered</th><th>Location</th>
-    <th class="n">#</th><th>Hunted</th><th>Mob</th><th>NPC</th></tr></thead><tbody>${rows.map(([g, gn, loc, h, hn, mob, npc], ti) =>
-    `<tr data-type="${TYPES[ti][0]}"><td class="strong" style="white-space:nowrap"><span class="sw" style="background:${TYPES[ti][1]}"></span>${TYPES[ti][0]}</td>
-    <td class="${prev ? "" : "dim"}">${prev ? `Flask of ${prev} ${TYPES[ti][0]}` : "–"}</td>
-    <td class="n">${gn}</td><td>${esc(g)}</td><td class="dim">${esc(loc)}</td>
-    <td class="n">${hn}</td><td>${esc(h)}</td><td class="dim">${esc(mob)}</td><td>${esc(npc)}</td></tr>`).join("")}</tbody></table></div>`;
-  flaskTables.appendChild(block);
-});
+    <th class="n">#</th><th>Hunted</th><th>Mob</th><th>NPC</th></tr></thead><tbody>${rows.map((r, ti) => {
+      const [type, color] = TYPES[ti], c = (i, f) => ed(`${p}${type}/${f}`, r[i]);
+      return `<tr data-type="${type}"${flaskType !== "All" && flaskType !== type ? " hidden" : ""}>
+      <td class="strong" style="white-space:nowrap"><span class="sw" style="background:${color}"></span>${type}</td>
+      <td class="${prev ? "" : "dim"}">${prev ? `Flask of ${prev} ${type}` : "–"}</td>
+      <td class="n">${c(1, "gathered-n")}</td><td>${c(0, "gathered")}</td><td class="dim">${c(2, "location")}</td>
+      <td class="n">${c(4, "hunted-n")}</td><td>${c(3, "hunted")}</td><td class="dim">${c(5, "mob")}</td><td>${c(6, "npc")}</td></tr>`;
+    }).join("")}</tbody></table></div></div>`;
+  }).join("");
+}
 const chips = document.getElementById("flask-chips");
 ["All", ...TYPES.map(t => t[0])].forEach((t, i) => {
   const b = document.createElement("button");
   b.className = "chip"; b.type = "button"; b.textContent = t;
   b.setAttribute("aria-pressed", i === 0);
   b.addEventListener("click", () => {
+    flaskType = t;
     chips.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b));
     flaskTables.querySelectorAll("tr[data-type]").forEach(tr => tr.hidden = t !== "All" && tr.dataset.type !== t);
   });
@@ -608,37 +680,56 @@ const SET_BASE = [
   [350, 550, 1200, 2200, 4000, 6000, 10000, 20000, 45000]];
 const inh = b => Math.ceil(b * 13 / 10);
 
+const NOTES = ["Epics gain 2× the weapon damage bonus.", "Rank II and III legendaries have an extra drif slot from Gold I onward."];
 const crustCells = i => {
   const c = Math.floor(i / 3), l = i % 3;
   return (l === 0 ? `<td rowspan="3" class="crust ${CRUSTS[c].toLowerCase()}">${CRUSTS[c]}</td>` : "") + `<td class="lvl">${LV[l]}</td>`;
 };
 const rowClass = i => i % 3 === 0 ? ' class="crust-top"' : "";
+const inhOf = n => n == null ? "–" : fmt(inh(n));
 
-document.getElementById("crust-cost").innerHTML =
-  `<thead><tr><th colspan="2" rowspan="2">Crust</th>${BANDS.map(b => `<th colspan="2" class="c band">${b}</th>`).join("")}</tr>
-  <tr>${BANDS.map(() => `<th class="n band">Step</th><th class="n">Total</th>`).join("")}</tr></thead><tbody>` +
-  [...Array(9).keys()].map(i => `<tr${rowClass(i)}>${crustCells(i)}${STEPS.map(s => {
-    const tot = s.slice(0, i + 1).reduce((a, b) => a + b, 0);
-    return `<td class="n band">${s[i] ? fmt(s[i]) : "–"}</td><td class="n dim">(${fmt(tot)})</td>`;
-  }).join("")}</tr>`).join("") + "</tbody>";
+function renderShards() {
+  document.getElementById("crust-cost").innerHTML =
+    `<thead><tr><th colspan="2" rowspan="2">Crust</th>${BANDS.map(b => `<th colspan="2" class="c band">${b}</th>`).join("")}</tr>
+    <tr>${BANDS.map(() => `<th class="n band">Step</th><th class="n">Total</th>`).join("")}</tr></thead><tbody>` +
+    [...Array(9).keys()].map(i => `<tr${rowClass(i)}>${crustCells(i)}${STEPS.map((s, bi) => {
+      const steps = s.map((d, j) => num(`shards/cost/${bi}/${j}`, d) ?? 0);
+      const tot = steps.slice(0, i + 1).reduce((a, b) => a + b, 0);
+      return `<td class="n band">${ed(`shards/cost/${bi}/${i}`, s[i], { number: true, dash: true })}</td><td class="n dim">(${fmt(tot)})</td>`;
+    }).join("")}</tr>`).join("") + "</tbody>";
 
-document.getElementById("crust-bonus").innerHTML =
-  `<thead><tr><th colspan="2">Crust</th><th class="n">Stats &amp; Res</th><th class="n">Wpn dmg</th><th class="n">Upgrades</th><th class="n">Orb</th><th class="n">Drif</th><th class="n">Drif cap</th></tr></thead><tbody>` +
-  BONUS.map((r, i) => `<tr${rowClass(i)}>${crustCells(i)}${r.map(v => `<td class="n${v === "-" ? " dim" : ""}">${v === "-" ? "–" : v}</td>`).join("")}</tr>`).join("") + "</tbody>";
+  document.getElementById("crust-bonus").innerHTML =
+    `<thead><tr><th colspan="2">Crust</th><th class="n">Stats &amp; Res</th><th class="n">Wpn dmg</th><th class="n">Upgrades</th><th class="n">Orb</th><th class="n">Drif</th><th class="n">Drif cap</th></tr></thead><tbody>` +
+    BONUS.map((r, i) => `<tr${rowClass(i)}>${crustCells(i)}${r.map((v, j) => {
+      const k = `shards/bonus/${i}/${j}`;
+      return `<td class="n${val(k, v) === "-" ? " dim" : ""}">${ed(k, v, { dash: true })}</td>`;
+    }).join("")}</tr>`).join("") + "</tbody>";
 
-document.getElementById("shat-syn").innerHTML =
-  `<thead><tr><th>Ranks</th><th class="n">Base</th><th class="n">+Inh.</th><th class="n">Essence</th></tr></thead><tbody>` +
-  [1, 5, 25, 125].map((b, i) => `<tr><td class="strong">${BANDS[i]}</td><td class="n dim">(${b})</td><td class="n">${inh(b)}</td><td class="n">${ESS[i][0]}</td></tr>`).join("") + "</tbody>";
+  document.getElementById("bonus-notes").innerHTML = NOTES.map((t, i) => `<li>${ed(`shards/notes/${i}`, t)}</li>`).join("");
 
-function shatter(el, BASE) {
+  document.getElementById("shat-syn").innerHTML =
+    `<thead><tr><th>Ranks</th><th class="n">Base</th><th class="n">+Inh.</th><th class="n">Essence</th></tr></thead><tbody>` +
+    [1, 5, 25, 125].map((b, i) => `<tr><td class="strong">${BANDS[i]}</td>
+      <td class="n dim">(${ed(`shards/syn/${i}/base`, b, { number: true })})</td>
+      <td class="n">${inhOf(num(`shards/syn/${i}/base`, b))}</td>
+      <td class="n">${ed(`shards/syn/${i}/ess`, ESS[i][0], { number: true })}</td></tr>`).join("") + "</tbody>";
+
+  shatter(document.getElementById("shat-leg"), LEG_BASE, "leg");
+  shatter(document.getElementById("shat-set"), SET_BASE, "set");
+}
+function shatter(el, BASE, name) {
   el.innerHTML = `<thead><tr><th colspan="2" rowspan="2">Crust</th>${BANDS.map(b => `<th colspan="3" class="c band">${b}</th>`).join("")}</tr>
     <tr>${BANDS.map(() => `<th class="n band">Base</th><th class="n">+Inh.</th><th class="n">Ess.</th>`).join("")}</tr></thead><tbody>` +
-    [...Array(9).keys()].map(i => `<tr${rowClass(i)}>${crustCells(i)}${BASE.map((band, bi) =>
-      `<td class="n dim band">(${fmt(band[i])})</td><td class="n">${fmt(inh(band[i]))}</td>` +
-      (i % 3 === 0 ? `<td class="n" rowspan="3" style="vertical-align:middle">${ESS[bi][i / 3]}</td>` : "")).join("")}</tr>`).join("") + "</tbody>";
+    [...Array(9).keys()].map(i => `<tr${rowClass(i)}>${crustCells(i)}${BASE.map((band, bi) => {
+      const k = `shards/${name}/${bi}/${i}`;
+      return `<td class="n dim band">(${ed(k, band[i], { number: true })})</td><td class="n">${inhOf(num(k, band[i]))}</td>` +
+        (i % 3 === 0 ? `<td class="n" rowspan="3" style="vertical-align:middle">${ed(`shards/${name}-ess/${bi}/${i / 3}`, ESS[bi][i / 3], { number: true })}</td>` : "");
+    }).join("")}</tr>`).join("") + "</tbody>";
 }
-shatter(document.getElementById("shat-leg"), LEG_BASE);
-shatter(document.getElementById("shat-set"), SET_BASE);
+
+renderShared();
+if (pin) setEditing(true);
+loadShared();
 </script>
 </body>
 </html>

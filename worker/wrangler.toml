@@ -1,0 +1,13 @@
+name = "brokenranks-edits"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+
+# One address, not one per version (see fitness-board/worker/wrangler.toml).
+workers_dev = true
+preview_urls = false
+
+# The PIN is NOT here: it is set with `wrangler secret put EDIT_PIN`.
+[[d1_databases]]
+binding = "DB"
+database_name = "brokenranks"
+database_id = "f4ad7d3a-3d4f-4fae-b78b-389ac15f1861"
