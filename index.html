@@ -113,7 +113,10 @@ tr.crust-top td { border-top: 1px solid var(--muted); }
   padding: 0; cursor: pointer; border-bottom: 1px dotted var(--muted); }
 .th-btn:hover { color: var(--fg); }
 .th-btn[aria-pressed="true"] { color: var(--listen); border-bottom-color: var(--listen); }
-.th-btn[aria-pressed="true"]::after { content: " · running"; }
+#timer-filter[aria-pressed="true"]::after { content: " · running"; }
+th[aria-sort] .th-btn { color: var(--listen); border-bottom-color: var(--listen); }
+th[aria-sort="ascending"] .th-btn::after { content: " ▲"; }
+th[aria-sort="descending"] .th-btn::after { content: " ▼"; }
 .timer small { font: 400 .7rem var(--body); color: var(--muted); margin-left: 6px; }
 body:not(.editing) .edit-only { display: none !important; }
 .ed:empty::before { content: "–"; color: var(--muted); }
@@ -199,7 +202,9 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
     </div>
     <div class="tw" style="max-width:760px">
       <table>
-        <thead><tr><th>NPC</th><th>Location</th><th class="edit-only"></th></tr></thead>
+        <thead><tr><th id="npc-th-name"><button class="th-btn" type="button" data-sort="name" title="Sort by NPC name">NPC</button></th>
+          <th id="npc-th-location"><button class="th-btn" type="button" data-sort="location" title="Sort by location">Location</button></th>
+          <th class="edit-only"></th></tr></thead>
         <tbody id="npc-body"></tbody>
       </table>
       <p class="empty" id="npc-empty" hidden></p>
@@ -816,12 +821,40 @@ const npcIds = () => [...new Set(Object.keys(shared).filter(k => k.startsWith("n
 function renderNpcs() {
   npcBody.innerHTML = npcIds().map(id => {
     const n = `npcs/${id}/name`, l = `npcs/${id}/location`;
-    return `<tr data-id="${id}" data-text="${esc((val(n, "") + " " + val(l, "")).toLowerCase())}">
+    return `<tr data-id="${id}" data-name="${esc(val(n, ""))}" data-location="${esc(val(l, ""))}" data-text="${esc((val(n, "") + " " + val(l, "")).toLowerCase())}">
       <td class="strong">${ed(n, "", { plain: true })}</td><td>${ed(l, "", { plain: true })}</td>
       <td class="edit-only" style="text-align:right"><button class="act small danger" type="button" data-del="${id}">Delete</button></td></tr>`;
   }).join("");
+  sortNpcs();
   applyNpcFilter();
 }
+// sort by the clicked header; clicking it again flips the direction. Blank values go last.
+// The choice is remembered per browser.
+const NPC_SORT_STORE = "brokenranks-npc-sort";
+let npcSort = { by: "name", dir: 1 };
+try { npcSort = JSON.parse(localStorage.getItem(NPC_SORT_STORE)) || npcSort; } catch (e) {}
+function sortNpcs() {
+  const { by, dir } = npcSort;
+  const rows = [...npcBody.querySelectorAll("tr[data-id]")];
+  rows.sort((a, b) => {
+    const x = a.dataset[by], y = b.dataset[by];
+    if (!x !== !y) return x ? -1 : 1;
+    return dir * (x.localeCompare(y, undefined, { numeric: true, sensitivity: "base" })
+      || a.dataset.name.localeCompare(b.dataset.name, undefined, { sensitivity: "base" }));
+  });
+  const draft = npcBody.querySelector(".npc-draft");
+  rows.forEach(tr => npcBody.insertBefore(tr, draft)); // a line being added stays at the bottom
+  ["name", "location"].forEach(k => {
+    const th = document.getElementById("npc-th-" + k);
+    if (k === by) th.setAttribute("aria-sort", dir > 0 ? "ascending" : "descending"); else th.removeAttribute("aria-sort");
+  });
+}
+document.querySelectorAll("#npcs .th-btn[data-sort]").forEach(b => b.addEventListener("click", () => {
+  const by = b.dataset.sort;
+  npcSort = { by, dir: npcSort.by === by ? -npcSort.dir : 1 };
+  try { localStorage.setItem(NPC_SORT_STORE, JSON.stringify(npcSort)); } catch (e) {}
+  sortNpcs();
+}));
 function applyNpcFilter() {
   const q = npcFilter.value.trim().toLowerCase();
   const rows = [...npcBody.querySelectorAll("tr[data-id]")];
