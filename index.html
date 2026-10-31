@@ -115,6 +115,10 @@ tr.crust-top td { border-top: 1px solid var(--muted); }
 .th-btn[aria-pressed="true"] { color: var(--listen); border-bottom-color: var(--listen); }
 .th-btn[aria-pressed="true"]::after { content: " · running"; }
 .timer small { font: 400 .7rem var(--body); color: var(--muted); margin-left: 6px; }
+body:not(.editing) .edit-only { display: none !important; }
+.ed:empty::before { content: "–"; color: var(--muted); }
+.act.small { padding: 3px 9px; font-size: .75rem; }
+.act.danger { color: var(--clash); border-color: var(--clash); }
 body.editing .ed { cursor: text; border-bottom: 1px dotted var(--muted); }
 body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen); }
 .cinput { font: 500 .9rem var(--body); color: var(--fg); background: var(--bg); border: 1px solid var(--listen);
@@ -129,6 +133,7 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
     <button class="tab" role="tab" id="tab-champions" aria-controls="champions" type="button">Champions</button>
     <button class="tab" role="tab" id="tab-flasks" aria-controls="flasks" type="button">Flasks</button>
     <button class="tab" role="tab" id="tab-shards" aria-controls="shards" type="button">Shards</button>
+    <button class="tab" role="tab" id="tab-npcs" aria-controls="npcs" type="button">NPCs</button>
   </nav>
   <div class="editbar" id="editbar" hidden>
     <button class="act" id="edit-toggle" type="button">Unlock editing</button>
@@ -183,6 +188,24 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
     <p class="empty" id="flask-empty" hidden></p>
   </div>
 
+  <!-- NPCS -->
+  <div role="tabpanel" id="npcs" aria-labelledby="tab-npcs" hidden>
+    <div class="bar">
+      <p class="hint">Where to find each NPC. With editing unlocked, <b>Add NPC</b> adds a line, click a name or location to change it, and <b>Delete</b> removes a line. Changes show for everyone.</p>
+      <div class="tools">
+        <input class="filter" id="npc-filter" type="search" placeholder="Search name or location" aria-label="Search NPCs">
+        <button class="act edit-only" id="npc-add" type="button">Add NPC</button>
+      </div>
+    </div>
+    <div class="tw" style="max-width:760px">
+      <table>
+        <thead><tr><th>NPC</th><th>Location</th><th class="edit-only"></th></tr></thead>
+        <tbody id="npc-body"></tbody>
+      </table>
+      <p class="empty" id="npc-empty" hidden></p>
+    </div>
+  </div>
+
   <!-- SHARDS -->
   <div role="tabpanel" id="shards" aria-labelledby="tab-shards" hidden>
     <div>
@@ -216,7 +239,7 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
 
 <script>
 /* ---------- tabs ---------- */
-const TABS = ["keys", "champions", "flasks", "shards"];
+const TABS = ["keys", "champions", "flasks", "shards", "npcs"];
 function showTab(name) {
   if (!TABS.includes(name)) name = "keys";
   TABS.forEach(t => {
@@ -449,7 +472,7 @@ const num = (k, d) => { const n = Number(val(k, d).replace(/,/g, "")); return va
 const items = (k, d) => val(k, d).split("|").map(s => s.trim()).filter(Boolean);
 // one editable value: o.list = "|"-separated list, o.sep = how a list is shown, o.number = format digits, o.dash = show 0 or "-" as a dash
 function ed(k, d, o = {}) {
-  const on = k in shared, v = val(k, d), n = num(k, d);
+  const on = k in shared && !o.plain, v = val(k, d), n = num(k, d); // o.plain: no "corrected" note (values with no built-in original)
   let shown = esc(v);
   if (o.list) shown = esc(items(k, d).join(o.sep ?? "\n"));
   else if (o.dash && (v === "-" || n === 0)) shown = "–";
@@ -536,7 +559,7 @@ async function saveEdit(k, v, d) {
       note(`Not saved: the shared store answered ${r.status}.`, true);
     } else {
       if (restore) delete shared[k]; else shared[k] = v;
-      note(restore ? `Back to the original for everyone: ${d.split("|").join(", ")}.` : `Saved for everyone: ${v.split("|").join(", ")}.`);
+      note(restore ? (d ? `Back to the original for everyone: ${d.split("|").join(", ")}.` : "Cleared for everyone.") : `Saved for everyone: ${v.split("|").join(", ")}.`);
     }
   } catch (err) { note("Not saved: couldn't reach the shared store.", true); }
   renderShared();
@@ -555,7 +578,7 @@ async function loadShared(quiet) {
     tickTimers();
   } catch (e) { if (!quiet) note("Couldn't load the shared corrections, so the built-in values are shown.", true); }
 }
-function renderShared() { renderChampions(); renderFlasks(); renderShards(); }
+function renderShared() { renderChampions(); renderFlasks(); renderShards(); renderNpcs(); }
 
 /* champions render */
 const champBody = document.getElementById("champ-body");
@@ -782,6 +805,98 @@ const chips = document.getElementById("flask-chips");
     applyFlaskFilter();
   });
   chips.appendChild(b);
+});
+
+/* ---------- NPCs ---------- */
+// npcs/<id>/name and npcs/<id>/location in the shared store. The id is the time the line was added
+// (base 36), so sorting ids keeps the list in the order it was built.
+const npcBody = document.getElementById("npc-body");
+const npcFilter = document.getElementById("npc-filter");
+const npcIds = () => [...new Set(Object.keys(shared).filter(k => k.startsWith("npcs/")).map(k => k.split("/")[1]))].sort();
+function renderNpcs() {
+  npcBody.innerHTML = npcIds().map(id => {
+    const n = `npcs/${id}/name`, l = `npcs/${id}/location`;
+    return `<tr data-id="${id}" data-text="${esc((val(n, "") + " " + val(l, "")).toLowerCase())}">
+      <td class="strong">${ed(n, "", { plain: true })}</td><td>${ed(l, "", { plain: true })}</td>
+      <td class="edit-only" style="text-align:right"><button class="act small danger" type="button" data-del="${id}">Delete</button></td></tr>`;
+  }).join("");
+  applyNpcFilter();
+}
+function applyNpcFilter() {
+  const q = npcFilter.value.trim().toLowerCase();
+  const rows = [...npcBody.querySelectorAll("tr[data-id]")];
+  let shown = 0;
+  rows.forEach(tr => { tr.hidden = q && !tr.dataset.text.includes(q); if (!tr.hidden) shown++; });
+  const empty = document.getElementById("npc-empty");
+  empty.hidden = shown > 0 || !!npcBody.querySelector(".npc-draft");
+  empty.textContent = rows.length ? `No NPC or location matches "${npcFilter.value.trim()}".`
+    : "No NPCs yet. Unlock editing and click Add NPC to add the first one.";
+}
+npcFilter.addEventListener("input", applyNpcFilter);
+async function npcWrite(method, key, value) {
+  const r = await fetch(API + "/api/edits", {
+    method,
+    headers: { "content-type": "application/json", "x-edit-pin": pin || "" },
+    body: JSON.stringify(method === "PUT" ? { key, value } : { key }) });
+  if (r.status === 401) { forgetPin(); setEditing(false); throw new Error("The PIN was refused, so nothing was saved. Unlock again."); }
+  if (!r.ok) throw new Error(`Not saved: the shared store answered ${r.status}.`);
+}
+document.getElementById("npc-add").addEventListener("click", () => {
+  const open = npcBody.querySelector(".npc-draft");
+  if (open) return open.querySelector("input").focus();
+  const tr = document.createElement("tr");
+  tr.className = "npc-draft";
+  tr.innerHTML = `<td><input class="cinput" id="npc-new-name" placeholder="Name" aria-label="New NPC name"></td>
+    <td><input class="cinput" id="npc-new-location" placeholder="Location" aria-label="New NPC location"></td>
+    <td style="text-align:right;white-space:nowrap"><button class="act small" type="button" data-save>Save</button>
+    <button class="act small" type="button" data-cancel>Cancel</button></td>`;
+  npcBody.appendChild(tr);
+  document.getElementById("npc-empty").hidden = true;
+  const nameIn = tr.querySelector("#npc-new-name"), locIn = tr.querySelector("#npc-new-location");
+  nameIn.focus();
+  const cancel = () => { tr.remove(); applyNpcFilter(); };
+  const save = async () => {
+    const name = nameIn.value.trim(), loc = locIn.value.trim();
+    if (!name) { note("Give the NPC a name first.", true); return nameIn.focus(); }
+    const id = Date.now().toString(36), nk = `npcs/${id}/name`, lk = `npcs/${id}/location`;
+    tr.querySelectorAll("input, button").forEach(x => x.disabled = true);
+    try {
+      await npcWrite("PUT", nk, name); shared[nk] = name;
+      if (loc) { await npcWrite("PUT", lk, loc); shared[lk] = loc; }
+      note(`Added ${name} for everyone.`);
+    } catch (err) {
+      note(err.message, true);
+      // nothing stored yet: keep the typed line so it can be saved again
+      if (!(nk in shared)) { tr.querySelectorAll("input, button").forEach(x => x.disabled = false); return; }
+    }
+    renderNpcs();
+  };
+  tr.querySelector("[data-save]").addEventListener("click", save);
+  tr.querySelector("[data-cancel]").addEventListener("click", cancel);
+  [nameIn, locIn].forEach(i => i.addEventListener("keydown", e => {
+    if (e.key === "Enter") save();
+    if (e.key === "Escape") cancel();
+  }));
+});
+// Delete asks for a second click within 3 seconds, then removes the line for everyone
+npcBody.addEventListener("click", async e => {
+  const b = e.target.closest("[data-del]");
+  if (!b) return;
+  const id = b.dataset.del, name = val(`npcs/${id}/name`, "") || "that line";
+  if (b.dataset.armed !== "1") {
+    b.dataset.armed = "1"; b.textContent = "Confirm";
+    setTimeout(() => { if (b.isConnected) { b.dataset.armed = ""; b.textContent = "Delete"; } }, 3000);
+    return;
+  }
+  b.disabled = true;
+  try {
+    for (const f of ["name", "location"]) {
+      const k = `npcs/${id}/${f}`;
+      if (k in shared) { await npcWrite("DELETE", k); delete shared[k]; }
+    }
+    note(`Deleted ${name} for everyone.`);
+  } catch (err) { note(err.message, true); }
+  renderNpcs();
 });
 
 /* ---------- shards ---------- */

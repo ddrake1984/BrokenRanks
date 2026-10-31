@@ -15,8 +15,9 @@
  */
 
 const ALLOWED_ORIGINS = ['https://ddrake1984.github.io'];
-// timers/champions/<group>/<row> holds the kill time (ms since epoch) of a shared respawn timer
-const KEY_RE = /^(champions|flasks|shards|timers)\/[A-Za-z0-9 _\-\/.']{1,120}$/;
+// timers/champions/<group>/<row> holds the kill time (ms since epoch) of a shared respawn timer;
+// npcs/<id>/name and npcs/<id>/location are the owner's own NPC list
+const KEY_RE = /^(champions|flasks|shards|timers|npcs)\/[A-Za-z0-9 _\-\/.']{1,120}$/;
 const MAX_VALUE = 300;
 
 /* Compare without leaking the answer in how long it took. */

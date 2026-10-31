@@ -16,6 +16,12 @@ reached, the page shows the defaults.
 - Corrected values look like any other; hover one to see the original.
 - Lists (areas, set names) are edited separated by semicolons.
 
+## NPCs
+
+Your own list of NPC names and locations, shared like the corrections (`npcs/<id>/name` and
+`npcs/<id>/location` keys). With editing unlocked: **Add NPC** adds a line, click a name or location
+to change it, **Delete** (click twice) removes a line. Everyone can search it.
+
 ## Respawn timers
 
 Each champion has a **Start** button: click it when the champion dies. It counts down to the earliest
