@@ -22,6 +22,15 @@ Your own list of NPC names and locations, shared like the corrections (`npcs/<id
 `npcs/<id>/location` keys). With editing unlocked: **Add NPC** adds a line, click a name or location
 to change it, **Delete** (click twice) removes a line. Everyone can search it.
 
+## Dungeons
+
+38 dungeons (instances) with bosses, boss rares and loot for the three paths: Discovery (Poznanie),
+Adventure (Przygoda), Challenge (Wyzwanie). Researched 2026-11-01 from the official patch notes,
+wikibr.pl and the Broken Ranks fandom wikis; each dungeon shows its sources and a confidence level.
+The game only shows full per-path loot tables in the instance entry window, so the per-path lists
+hold what sources mention; Discovery loot is mostly unknown. Collapsible, searchable by dungeon,
+boss or item; corrections and added dungeons are shared (`dungeons/<id>/<field>` keys, PIN).
+
 ## Respawn timers
 
 Each champion has a **Start** button: click it when the champion dies. It counts down to the earliest

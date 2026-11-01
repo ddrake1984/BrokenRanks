@@ -119,6 +119,38 @@ th[aria-sort="ascending"] .th-btn::after { content: " ▲"; }
 th[aria-sort="descending"] .th-btn::after { content: " ▼"; }
 .timer small { font: 400 .7rem var(--body); color: var(--muted); margin-left: 6px; }
 body:not(.editing) .edit-only { display: none !important; }
+/* dungeons */
+details.dun { background: var(--panel); border: 1px solid var(--line); margin-bottom: 10px; }
+details.dun > summary { list-style: none; cursor: pointer; padding: 10px 14px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+details.dun > summary::-webkit-details-marker { display: none; }
+details.dun > summary::before { content: "▸"; color: var(--muted); width: 1ch; }
+details.dun[open] > summary::before { content: "▾"; }
+details.dun > summary:focus-visible { outline: 2px solid var(--listen); outline-offset: -2px; }
+.dun-name { font: 600 1rem var(--display); letter-spacing: .04em; }
+.dun-meta { color: var(--muted); font-size: .85rem; }
+.dun-count { margin-left: auto; color: var(--muted); font: 500 .8rem var(--mono); }
+.dun-body { padding: 12px 14px 14px; border-top: 1px solid var(--line); display: grid; gap: 14px; }
+.dun-body h3 { font: 500 .72rem var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 4px; }
+.dun-fields { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: baseline; max-width: 560px; }
+.dun-fields .lbl { font: 500 .72rem var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.loot { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px; }
+.loot h3.mode-discovery { color: var(--open); } .loot h3.mode-adventure { color: var(--listen); } .loot h3.mode-challenge { color: var(--clash); }
+.it { display: block; padding: 1px 0; }
+.hit { background: color-mix(in srgb, var(--listen) 25%, transparent); }
+.dun-src { color: var(--muted); font-size: .8rem; margin: 0; max-width: 90ch; }
+.dun-src a { color: var(--fg); }
+.conf { font: 500 .68rem var(--body); text-transform: uppercase; letter-spacing: .06em; padding: 1px 6px; border: 1px solid; border-radius: 2px; }
+.conf-high { color: var(--open); } .conf-medium { color: var(--listen); } .conf-low { color: var(--clash); }
+.dun-paths { display: inline-flex; gap: 3px; }
+.pip { font: 600 .68rem var(--mono); font-style: normal; width: 1.5em; text-align: center; border: 1px solid; border-radius: 2px; }
+.pip.mode-discovery { color: var(--open); } .pip.mode-adventure { color: var(--listen); } .pip.mode-challenge { color: var(--clash); }
+.pip.off { color: var(--line); }
+.paths-guide { background: var(--panel); border: 1px solid var(--line); margin-bottom: 14px; color: var(--muted); font-size: .88rem; }
+.paths-guide summary { cursor: pointer; padding: 8px 14px; color: var(--fg); }
+.paths-guide ul { margin: 0; padding: 0 14px 12px 32px; max-width: 90ch; display: grid; gap: 4px; }
+.paths-guide b.mode-discovery { color: var(--open); } .paths-guide b.mode-adventure { color: var(--listen); } .paths-guide b.mode-challenge { color: var(--clash); }
+.dun-draft { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; max-width: 560px; }
+.dun-draft .cinput { flex: 1; }
 .ed:empty::before { content: "–"; color: var(--muted); }
 .act.small { padding: 3px 9px; font-size: .75rem; }
 .act.danger { color: var(--clash); border-color: var(--clash); }
@@ -137,6 +169,7 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
     <button class="tab" role="tab" id="tab-flasks" aria-controls="flasks" type="button">Flasks</button>
     <button class="tab" role="tab" id="tab-shards" aria-controls="shards" type="button">Shards</button>
     <button class="tab" role="tab" id="tab-npcs" aria-controls="npcs" type="button">NPCs</button>
+    <button class="tab" role="tab" id="tab-dungeons" aria-controls="dungeons" type="button">Dungeons</button>
   </nav>
   <div class="editbar" id="editbar" hidden>
     <button class="act" id="edit-toggle" type="button">Unlock editing</button>
@@ -211,6 +244,30 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
     </div>
   </div>
 
+  <!-- DUNGEONS -->
+  <div role="tabpanel" id="dungeons" aria-labelledby="tab-dungeons" hidden>
+    <div class="bar">
+      <p class="hint">Click a dungeon to open its bosses and the loot for Discovery, Adventure and Challenge. Search finds a dungeon, boss or item and opens the dungeons that have it. With editing unlocked, click any value to correct it, or add a dungeon. Lists are edited separated by semicolons.</p>
+      <div class="tools">
+        <input class="filter" id="dun-filter" type="search" placeholder="Search dungeon, boss or loot" aria-label="Search dungeons">
+        <button class="act" id="dun-toggle" type="button">Expand all</button>
+        <button class="act edit-only" id="dun-add" type="button">Add dungeon</button>
+      </div>
+    </div>
+    <details class="paths-guide">
+      <summary>How the three paths differ</summary>
+      <ul>
+        <li><b class="mode-adventure">Adventure</b> is the original instance. Discovery and Challenge were added on top of it in patches 6.29–6.33 (2023).</li>
+        <li><b class="mode-discovery">Discovery</b> (Polish: Poznanie) has weaker enemies, lower drop rates, less XP and psychoexperience, and lower-value loot. At most 2 players.</li>
+        <li><b class="mode-challenge">Challenge</b> (Polish: Wyzwanie) raises every enemy stat and gives better loot. Entry costs Tracks matching your gear rank: Unrest (I–III), Dread (IV–VI), Fright (VII–IX), Terror (X–XII). Daimonite drops only on this path.</li>
+        <li>The game shows each instance's full loot table in its entry window; it has never been published as text, so the per-path lists here are what sources mention. The <b>D A C</b> marks show which paths a dungeon is confirmed to have.</li>
+        <li>Researched from the official patch notes, wikibr.pl and the Broken Ranks fandom wikis. Each dungeon lists its own sources. <a href="https://brokenranks.com/en/news/gear-incrustation-and-instance-difficulty-levels" target="_blank" rel="noopener" style="color:var(--fg)">Official announcement</a>.</li>
+      </ul>
+    </details>
+    <div id="dun-list"></div>
+    <p class="empty" id="dun-empty" hidden></p>
+  </div>
+
   <!-- SHARDS -->
   <div role="tabpanel" id="shards" aria-labelledby="tab-shards" hidden>
     <div>
@@ -244,7 +301,7 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
 
 <script>
 /* ---------- tabs ---------- */
-const TABS = ["keys", "champions", "flasks", "shards", "npcs"];
+const TABS = ["keys", "champions", "flasks", "shards", "npcs", "dungeons"];
 function showTab(name) {
   if (!TABS.includes(name)) name = "keys";
   TABS.forEach(t => {
@@ -479,7 +536,7 @@ const items = (k, d) => val(k, d).split("|").map(s => s.trim()).filter(Boolean);
 function ed(k, d, o = {}) {
   const on = k in shared && !o.plain, v = val(k, d), n = num(k, d); // o.plain: no "corrected" note (values with no built-in original)
   let shown = esc(v);
-  if (o.list) shown = esc(items(k, d).join(o.sep ?? "\n"));
+  if (o.list) shown = o.items ? items(k, d).map(x => `<span class="it">${esc(x)}</span>`).join("") : esc(items(k, d).join(o.sep ?? "\n"));
   else if (o.dash && (v === "-" || n === 0)) shown = "–";
   else if (o.number && n != null) shown = fmt(n);
   return `<span class="ed${on ? " edited" : ""}" data-k="${esc(k)}" data-d="${esc(d)}"${o.list ? ' data-list="1"' : ""}` +
@@ -583,7 +640,7 @@ async function loadShared(quiet) {
     tickTimers();
   } catch (e) { if (!quiet) note("Couldn't load the shared corrections, so the built-in values are shown.", true); }
 }
-function renderShared() { renderChampions(); renderFlasks(); renderShards(); renderNpcs(); }
+function renderShared() { renderChampions(); renderFlasks(); renderShards(); renderNpcs(); renderDungeons(); }
 
 /* champions render */
 const champBody = document.getElementById("champ-body");
@@ -930,6 +987,176 @@ npcBody.addEventListener("click", async e => {
     note(`Deleted ${name} for everyone.`);
   } catch (err) { note(err.message, true); }
   renderNpcs();
+});
+
+/* ---------- dungeons ---------- */
+// The built-in list comes from web research, with its sources kept per dungeon. Corrections and
+// added dungeons live in the shared store as dungeons/<id>/<field>: built-in ids are b0, b1…,
+// added ones are x + the time they were added in base 36.
+const MODES = [["discovery", "Discovery"], ["adventure", "Adventure"], ["challenge", "Challenge"]];
+const DUNGEONS = [
+  {"name":"Chieftain instance (Chieftain's Cave)","name_pl":"Jaskinia Herszta / Siedziba Herszta (boss: Herszt)","level":"22 (suggested 14+)","location":"Trentis zone - through the Southern Cave west of the Fishermen Village","bosses":["Chieftain"],"modes_available":["adventure"],"rares":["Derengil","Sturprang","Mayarot"],"loot":{"discovery":[],"adventure":["Level 20 synergetics (wikibr)"],"challenge":[]},"notes":"No difficulty paths found for this instance in any patch note; treated as single (base) difficulty. wikibr.pl lists only Derengil as the current rare, the English fandom wiki lists three - rare list may be outdated.","sources":["https://brokenranks.fandom.com/wiki/Chieftain","https://brokenranks.fandom.com/wiki/Chieftain's_Cave","https://wikibr.pl/index.php/Siedziba_Herszta","https://wikibr.pl/index.php/Bossy"],"confidence":"medium"},
+  {"name":"Cross-Spider instance (Cross-Spider Tunnel)","name_pl":"Tunel Krzyżaka (boss: Krzyżak)","level":"30 (suggested 16-30)","location":"Trentis zone - Swamp, via the Spider Tunnels, west to the tunnel entrance","bosses":["Cross Spider"],"modes_available":["adventure"],"rares":["Arcanscape","Martumal","Ayol"],"loot":{"discovery":[],"adventure":["Level 20 synergetics (wikibr)"],"challenge":[]},"notes":"No difficulty paths found; single difficulty. Fandom page also shows Gaurala/Talgunds/Dahadi images under \"Loot Drops\" (unclear, likely synergetics/old data).","sources":["https://brokenranks.fandom.com/wiki/Cross_Spider","https://wikibr.pl/index.php/Tunel_Krzy%C5%BCaka","https://wikibr.pl/index.php/Bossy"],"confidence":"medium"},
+  {"name":"Taunty instance","name_pl":"","level":"8 (recommended)","location":"Hamlet near Trentis","bosses":["Taunty"],"modes_available":[],"rares":["Magey Backfur","Wacky Backfur","Shammy Grabguards","Killy Grabguards"],"loot":{"discovery":[],"adventure":["Mushrooms","Colorful Stones","Crops"],"challenge":[]},"notes":"Solo goblin boss added in Update 12.64 (Oct 2026) with an instance/rare-gear tutorial. No difficulty paths mentioned; the non-gear items sit under adventure only because that is the base path - mode not stated. Polish name not found.","sources":["https://brokenranks.com/en/news/update-1264","https://brokenranks.com/en/news/new-boss-path-of-exploration-and-social-quests--a-fresh-update-for-new-broken-ranks-players"],"confidence":"high"},
+  {"name":"Elemental Specters instance (Specters Tomb)","name_pl":"Grobowiec Duchów Żywiołów (Duch Ognia / Duch Zimna / Duch Energii)","level":"60 (suggested 27+)","location":"Trentis zone - Castle Gastelhof area; entry guarded by Gatekeepers (Furtians); Claudius's Grand Rune gives corridor immunity","bosses":["Fire Specter","Ice Specter","Energy Specter"],"modes_available":["discovery","adventure","challenge"],"rares":["Pyroclast","Brassars","Uguns (Fire)","Ishelm","Isthrimm","Isverd (Ice)","Fulgur","Radius Electricum","Sphaera (Energy)"],"loot":{"discovery":[],"adventure":["Level 20-30 synergetics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)"]},"notes":"Got easy+hard (Discovery+Challenge) in patch 6.29. Patch 10.57 raised rare drop rate here; patch 11.61 removed pet items Hussarion and Basteya from its loot.","sources":["https://brokenranks.fandom.com/wiki/Bosses","https://brokenranks.fandom.com/wiki/Fire_Specter","https://wikibr.pl/index.php/Grobowiec_Duch%C3%B3w","https://brokenranks.com/en/news/patch-629","https://brokenranks.com/en/news/update-1057","https://brokenranks.com/en/news/patch-1161"],"confidence":"high"},
+  {"name":"Toad instance","name_pl":"Żabi Raj / Bagno Ropuchy (boss: Ropucha)","level":"30 (suggested 30+)","location":"Southern Alaril - Mire; requires Depths of Breath (Zohar, Druid Village, 3,500 gold)","bosses":["Toad"],"modes_available":["adventure","challenge"],"rares":["Crest","Basileus","Marshes","Fraxes"],"loot":{"discovery":[],"adventure":["Level 20-30 synergetics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)"]},"notes":"Path of Challenge added in patch 6.31 (\"path of challenge only\"), so Adventure + Challenge. wikibr says it is a single-player instance. English location name not found (Żabi Raj = \"Frog Paradise\", my translation).","sources":["https://brokenranks.fandom.com/wiki/Toad","https://wikibr.pl/index.php/%C5%BBabi_Raj","https://brokenranks.com/en/news/patch-631","https://wikibr.pl/index.php/Bossy"],"confidence":"medium"},
+  {"name":"Ichtion instance (Shipwreck)","name_pl":"Wrak Statku / Statek Ichtiona (boss: Ichtion)","level":"45 (suggested 22+)","location":"Southern Alaril - the shipwreck","bosses":["Ichtion"],"modes_available":["discovery","adventure","challenge"],"rares":["Chengsveses","Fiskorl","Rolrak"],"loot":{"discovery":[],"adventure":["Level 20-30 synergetics","Epics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)","Tracks","Synergetics (rate raised in Community Update 8.52)"]},"notes":"Discovery + Challenge added in patch 6.33.","sources":["https://brokenranks.fandom.com/wiki/Ichtion","https://wikibr.pl/index.php/Wrak_Statku","https://brokenranks.com/en/news/patch-633","https://brokenranks.com/en/news/community-update-852"],"confidence":"high"},
+  {"name":"Tower instance (Ghadira's Tower)","name_pl":"Wieża Ghadiry / Wieża bandytów","level":"50-65 (suggested 30+)","location":"Southern Alaril; floors II-IV; intro quest Spiral (lvl 27, optional)","bosses":["Babadek","Gregorius","Ghadira"],"modes_available":["discovery","adventure","challenge"],"rares":["Steroid","Bartaur","Cleaver (Babadek)","Karlder","Khalam","Tetanus (Gregorius)","Brunnle","Lysmars","Sidun (Ghadira)"],"loot":{"discovery":[],"adventure":["Level 20-30 synergetics","Epics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)","Tracks","Drifs (rates raised in Community Update 8.52)"]},"notes":"Discovery + Challenge added in patch 6.30. Patch 10.57 lowered rare drop rate in the Tower.","sources":["https://brokenranks.fandom.com/wiki/Tower","https://brokenranks.fandom.com/wiki/Bosses","https://brokenranks.com/en/news/a-handful-of-information-about-patch-630","https://wikibr.pl/index.php/Wie%C5%BCa_Ghadiry_(%C5%9Acie%C5%BCka_przygody)","https://brokenranks.com/en/news/community-update-852","https://brokenranks.com/en/news/update-1057"],"confidence":"high"},
+  {"name":"Puppet Master instance","name_pl":"Władca Marionetek / Las Marionetek","level":"35 (meant for ~29+)","location":"Near the Druid Village - Cursed Forest, west of Turvill then the southern fork","bosses":["Puppet Master"],"modes_available":["discovery","adventure","challenge"],"rares":["Master's Gesture","Master's Collar","Promuris","Coriatula"],"loot":{"discovery":[],"adventure":["Level 20-40 synergetics","Epics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)"]},"notes":"Discovery + Challenge added in patch 6.30. Entourage: Barbarian, Knight, Sheed, Archer, Voodoo puppets. Patch 10.57 raised its rare drop rate and cut its XP.","sources":["https://brokenranks.com/en/news/update-puppet-master-and-the-achievements-system","https://brokenranks.com/en/news/a-handful-of-information-about-patch-630","https://broken-ranks.fandom.com/pl/wiki/W%C5%82adca_Marionetek","https://wikibr.pl/index.php/Bossy"],"confidence":"high"},
+  {"name":"Geomorph instance (Golem Cave)","name_pl":"Jaskinia Golema / Jaskinia Geomorpha","level":"60 (suggested 25+)","location":"Alaril - Caves under the Marsh, eastern part near Joris","bosses":["Geomorph"],"modes_available":["discovery","adventure","challenge"],"rares":["Davgretor","Geomorph Core","Markahn","Pet rares: Erupter, Sliver, Jewel"],"loot":{"discovery":[],"adventure":["Level 20-30 synergetics","Epics","Granite (guaranteed from Rock Golems in the Right Branch)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)"]},"notes":"Discovery + Challenge added in patch 6.29. wikibr has separate Discovery and Challenge pages; their mob drop tables match the base page. Patch 11.61 removed Hussarion/Basteya pet items from it.","sources":["https://brokenranks.fandom.com/wiki/Geomorph","https://wikibr.pl/index.php/Jaskinia_Golema_(Poznanie)","https://wikibr.pl/index.php/Jaski_Golema_(Wyzwanie)","https://brokenranks.com/en/news/patch-629"],"confidence":"high"},
+  {"name":"Garthmog instance (Dragon Cave)","name_pl":"Jaskinia Smoka / Leże Garthmoga","level":"60-65 (suggested 30+)","location":"Alaril zone","bosses":["Garthmog"],"modes_available":["discovery","adventure","challenge"],"rares":["Dragon Bone","Caratris","Dragon Wing"],"loot":{"discovery":[],"adventure":["Level 20-40 synergetics","Epics (wikibr)","Track of Dread"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)"]},"notes":"Discovery + Challenge added in patch 6.29. Its Path of Challenge needs Tracks of Dread (rank IV-VI pool); Garthmog drops Tracks of Dread (wikibr).","sources":["https://brokenranks.fandom.com/wiki/Garthmog","https://wikibr.pl/index.php/Jaskinia_Smoka","https://wikibr.pl/index.php/Trop_l%C4%99ku","https://brokenranks.com/en/news/patch-629"],"confidence":"high"},
+  {"name":"Bear instance","name_pl":"Gawra (boss: Niedźwiedź)","level":"75 (suggested 35+)","location":"Khold Forest - Bear summoned with Fresh Meat (from Alpha) on the bone pile","bosses":["Bear"],"modes_available":[],"rares":["Irkamals","Yeroshkies","Ostolbin"],"loot":{"discovery":[],"adventure":["Level 20 synergetics","Epics (wikibr)","Track of Dread"],"challenge":[]},"notes":"Bear was listed as \"expected soon\" for difficulty levels (6.29 article) but no later patch confirms it got paths - modes unknown.","sources":["https://brokenranks.fandom.com/wiki/Bear","https://wikibr.pl/index.php/Gawra","https://brokenranks.com/en/news/gear-overhaul-and-difficulty-levels--the-629-update-in-a-nutshell"],"confidence":"medium"},
+  {"name":"Utorian Commander instance (Commander's Ship)","name_pl":"Okręt Komandora / Statek Komandora (boss: Utor Komandor)","level":"80 (suggested 40+)","location":"Alaril - ship; entry formerly needed quest or 55 Essences (requirement removed in 9.54)","bosses":["Utorian Commander"],"modes_available":["discovery","adventure","challenge"],"rares":["Commander Armor","Breeze","Ballast","Rivet","Navigon"],"loot":{"discovery":[],"adventure":["Level 20-50 synergetics (wikibr)","Track of Dread"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 15 since patch 7.44"]},"notes":"Additional difficulty levels added in patch 6.31 (paths not itemised; patch 7.42 refers to its Path of Challenge). Discovery not explicitly confirmed.","sources":["https://brokenranks.fandom.com/wiki/Utorian_Commander","https://wikibr.pl/index.php/Okr%C4%99t_Komandora","https://brokenranks.com/en/news/patch-631","https://brokenranks.com/en/news/patch-744","https://brokenranks.com/en/news/patch-742"],"confidence":"medium"},
+  {"name":"Castle Specter instance","name_pl":"Wymiar Klaudiusa / Grobowiec Ducha Zamku (boss: Duch Zamku)","level":"80 (suggested 40+)","location":"Lower Khemenak - portal from Arcanegrin (150,000 gold or a Black Pearl); Discovery entry 60,000 gold","bosses":["Castle Specter"],"modes_available":["discovery","adventure","challenge"],"rares":["Gathril","Virthil","Nurthil","Tirhel"],"loot":{"discovery":[],"adventure":["Level 20-50 synergetics (wikibr)","Track of Dread"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 15","More gold and more Tracks of Dread (patch 9.54)"]},"notes":"Discovery + Challenge added in patch 6.30. Discovery path lets you borrow a pet from Arcanegrin's Projection (9.54). Polish instance name Wymiar Klaudiusa = Claudius's Dimension (my translation).","sources":["https://brokenranks.com/en/news/update---castle-specter","https://brokenranks.com/en/news/a-handful-of-information-about-patch-630","https://brokenranks.com/en/news/patch-954","https://brokenranks.com/en/news/patch-744","https://wikibr.pl/index.php/Wymiar_Klaudiusa"],"confidence":"high"},
+  {"name":"Construct v.1 instance (Weakened Construct)","name_pl":"Sala Konstrukta v1 / Magazyn Osłabionego Konstrukta (boss: Osłabiony Konstrukt)","level":"75-85 (suggested 40+)","location":"Landau's Estate - Control Hall; place a Charged Cell on the console","bosses":["Construct v.1 (three forms)"],"modes_available":["discovery","adventure","challenge"],"rares":["Tangnars","Danthum","Valazan","Pressors (added in patch 6.33)"],"loot":{"discovery":[],"adventure":["Level 20-40 synergetics (wikibr)","Track of Dread"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)"]},"notes":"Discovery + Challenge added in patch 6.33. Boss fought in three successive forms.","sources":["https://brokenranks.fandom.com/wiki/Construct_v.1","https://wikibr.pl/index.php/Sala_Konstrukta_v1","https://brokenranks.com/en/news/patch-633"],"confidence":"high"},
+  {"name":"Fyodor and GMO instance","name_pl":"Pasaż Fyodora / Loch GMO","level":"80-85","location":"Khemenak; needs Laboratory Keys (2 on Discovery, 5 on Adventure/Challenge since 9.56); exit to Orc Forest","bosses":["Fyodor","Gmo"],"modes_available":["discovery","adventure","challenge"],"rares":["Diabolo","Skull","Pattern","Berglises (Fyodor)","Ragamuffins","Firehammer","Bastion of Gods","Geurs (Gmo)","Pet rares since 11.61: Basteya (Fyodor), Hussarion (Gmo)"],"loot":{"discovery":[],"adventure":["Level 20-60 synergetics (wikibr)","Track of Dread"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)","More synergetics and tracks (patch 9.56)"]},"notes":"Discovery + Challenge added in patch 6.29.","sources":["https://brokenranks.fandom.com/wiki/Fyodor","https://brokenranks.fandom.com/wiki/Gmo","https://brokenranks.com/en/news/patch-629","https://brokenranks.com/en/news/patch-956","https://brokenranks.com/en/news/patch-1161","https://wikibr.pl/index.php/Bossy"],"confidence":"high"},
+  {"name":"Mantis and Tiger instance (Bug Caves)","name_pl":"Robacze Jaskinie (Modliszka, Tygrys)","level":"90","location":"Entrance moved from Bug Burrow to Khold Mountains (9.54); Insect Map lets you pick any path; Discovery 40,000 gold with Insect Map","bosses":["Mantis","Tiger"],"modes_available":["discovery","adventure","challenge"],"rares":["Sentrion","Virral","Vaekans","Xenothor","Urntsul (Mantis)","Biltabandurs","Debba","Ghaitarog","Geurs","Berglises (Tiger)","Mantis pet rares: Xantorn, Vrighor, Xorgor"],"loot":{"discovery":[],"adventure":["Level 20-60 synergetics (wikibr)","Track of Dread"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 15","More gold and psychoexperience (9.54)"]},"notes":"Additional difficulty levels added in patch 6.31; 9.54 confirms Discovery and Challenge.","sources":["https://brokenranks.fandom.com/wiki/Mantis","https://brokenranks.fandom.com/wiki/Bosses","https://brokenranks.com/en/news/patch-631","https://brokenranks.com/en/news/patch-954","https://brokenranks.com/en/news/patch-744"],"confidence":"high"},
+  {"name":"Heurokratos instance","name_pl":"Dzielnica Heurokratosa","level":"gear 55-66; sidequest Enemy Mine at 55 (wikibr lists boss level 110)","location":"Remnant Hideout area; entry item from Shaggy (100k gold + 5 minor flasks)","bosses":["Heurokratos"],"modes_available":["discovery","adventure","challenge"],"rares":["The Eye","Drakhgard","Will Breaker","Traces of Events","Heurokratos' Ribbon"],"loot":{"discovery":[],"adventure":["Level 20-60 synergetics (wikibr)","Track of Dread"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 15"]},"notes":"Launched with three difficulty levels (Update 7.34, Jan 2024). Entourage Therionax and Excubitor; elite Voracious One. Fandom mentions a \"Heurokratos' Cuirass\" not in the official list.","sources":["https://brokenranks.com/en/news/update-734","https://brokenranks.fandom.com/wiki/Heurokratos","https://brokenranks.com/en/news/patch-744","https://wikibr.pl/index.php/Bossy"],"confidence":"high"},
+  {"name":"Ivravul instance (Spectral Horde City)","name_pl":"Miasto Ivravula / Miasto Widmowej Hordy","level":"105","location":"Dmorther - Spectral Horde City; entry needs one medium flask","bosses":["Ivravul"],"modes_available":["adventure","challenge"],"rares":["Hope of the Generations","Master of Fate","Ivravul's Revenge","Ivravul's Return"],"loot":{"discovery":[],"adventure":["Level 20-40 synergetics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 15"]},"notes":"Path of Challenge added in patch 6.30 (no Discovery).","sources":["https://brokenranks.fandom.com/wiki/Ivravul","https://brokenranks.com/en/news/a-handful-of-information-about-patch-630","https://brokenranks.com/en/news/patch-740","https://brokenranks.com/en/news/patch-744"],"confidence":"high"},
+  {"name":"Wendigo instance","name_pl":"Leże Wendigo","level":"120 (locked below 60)","location":"Plateau (Dmorther) - opened during a dynamic event; entry token Torch (25/day from the Old Man by the well)","bosses":["Wendigo"],"modes_available":["discovery","adventure","challenge"],"rares":["Buorians","Dagorilm","Avalanche","Thorimms"],"loot":{"discovery":[],"adventure":["Tracks (random open-world Wendigo drops the Adventure loot)","Level 30-80 synergetics (wikibr)"],"challenge":[]},"notes":"Instance on all three paths added in patch 9.54. Path of Challenge entry needs Track of Dread (wikibr).","sources":["https://brokenranks.fandom.com/wiki/Wendigo","https://brokenranks.com/en/news/patch-954","https://brokenranks.com/en/news/update-1057","https://wikibr.pl/index.php/Trop_l%C4%99ku"],"confidence":"high"},
+  {"name":"Valdarog instance (Valdarog's Lair)","name_pl":"Leże Valdaroga","level":"140 (wikibr 130; quest at 70)","location":"Plateau - hidden passage in a forgotten well, into the ice caves to Alkazaar's Hall; five grottoes give key fragments to break Alkazaar's Seal","bosses":["Valdarog"],"modes_available":["discovery","adventure","challenge"],"rares":["Dracorporis","Istav","Varrves","Virvens"],"loot":{"discovery":[],"adventure":["Level 30-70 synergetics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 40"]},"notes":"Additional difficulty levels added in patch 6.31; Discovery path not explicitly confirmed.","sources":["https://brokenranks.com/en/news/update-valdarog-and-pvp-arena","https://brokenranks.fandom.com/wiki/Valdarog","https://brokenranks.com/en/news/patch-631","https://brokenranks.com/en/news/patch-744"],"confidence":"medium"},
+  {"name":"Tit instance","name_pl":"Gniazdo Jaskółki (boss: Jaskółka)","level":"135","location":"Dmorther zone","bosses":["Tit"],"modes_available":["discovery","adventure","challenge"],"rares":["Fanga","Vogurun","Yurugu","Griv","Splinters"],"loot":{"discovery":[],"adventure":["Level 30-70 synergetics (wikibr)","Regular gear (added 7.40)","Track of Fright (rate raised 7.42)","Journeyman Glyphs (lowered 7.42)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 40"]},"notes":"Discovery + Challenge added in patch 6.30. Boss is immune to one random attack zone each round. Polish Jaskółka = Swallow; English client says Tit.","sources":["https://brokenranks.fandom.com/wiki/Tit","https://brokenranks.com/en/news/a-handful-of-information-about-patch-630","https://brokenranks.com/en/news/patch-740","https://brokenranks.com/en/news/patch-742","https://brokenranks.com/en/news/patch-744"],"confidence":"high"},
+  {"name":"Construct v.2 instance (Construct)","name_pl":"Magazyn Konstrukta (boss: Konstrukt)","level":"105/115/120","location":"Landau's Estate - Constructs Hall (same gate as v.1)","bosses":["Construct v.2"],"modes_available":["discovery","adventure","challenge"],"rares":["Sigil","Harttraum","Opener"],"loot":{"discovery":[],"adventure":["Level 30-70 synergetics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 60"]},"notes":"Discovery + Challenge added in patch 6.33, with a rebalance (new AI for the final form).","sources":["https://brokenranks.fandom.com/wiki/Bosses","https://brokenranks.com/en/news/patch-633","https://brokenranks.com/en/news/patch-744","https://wikibr.pl/index.php/Bossy"],"confidence":"high"},
+  {"name":"Aqua Regis instance","name_pl":"Laboratorium Aqua Regis","level":"recommended 75 at launch (wikibr lists boss 135)","location":"Near the Druid Village (entered via passage since 6.31); one entry per 7 days per path","bosses":["Aqua Regis"],"modes_available":["discovery","adventure","challenge"],"rares":["Tsunami","Current","Aquenirs","Aquariuses"],"loot":{"discovery":["Synergetics above level 60 (50/60 removed in 7.44)"],"adventure":["Synergetics above level 60 (50/60 removed in 7.44)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 60","Synergetics above level 70 (60/70 removed in 7.44)"]},"notes":"Additional difficulty levels added in patch 6.31; 7.44 names Discovery, Adventure and Challenge for it.","sources":["https://brokenranks.com/en/news/aqua-regis-update","https://brokenranks.com/en/news/patch-631","https://brokenranks.com/en/news/patch-744"],"confidence":"high"},
+  {"name":"Vough instance (Under the Ice)","name_pl":"Jaskinie pod lodem (boss: Vough)","level":"135","location":"Frozen Lake, Dmorther (shortcut from the bridge added 7.42)","bosses":["Vough"],"modes_available":["discovery","adventure","challenge"],"rares":["Mauremys","Batagur","Carapace"],"loot":{"discovery":[],"adventure":["Level 40-80 synergetics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 60 (ice bosses)"]},"notes":"One of the three \"Under the Ice\" boss instances; Discovery + Challenge added in patch 6.29. Discovery has extra mob groups but lower XP per mob (8.52).","sources":["https://brokenranks.fandom.com/wiki/Vough","https://brokenranks.com/en/news/patch-629","https://brokenranks.com/en/news/community-update-852","https://brokenranks.com/en/news/patch-744","https://wikibr.pl/index.php/Bossy"],"confidence":"high"},
+  {"name":"Vidvar instance (Under the Ice)","name_pl":"Jaskinie pod lodem (boss: Vidvar)","level":"135","location":"Frozen Lake, Dmorther (shortcut from the bridge added 7.42)","bosses":["Vidvar"],"modes_available":["discovery","adventure","challenge"],"rares":["Skogan","Gjolmar","Skiilfes"],"loot":{"discovery":[],"adventure":["Level 40-80 synergetics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 60 (ice bosses)"]},"notes":"One of the three \"Under the Ice\" boss instances; Discovery + Challenge added in patch 6.29. Discovery has extra mob groups but lower XP per mob (8.52).","sources":["https://brokenranks.fandom.com/wiki/Vidvar","https://brokenranks.com/en/news/patch-629","https://brokenranks.com/en/news/community-update-852","https://brokenranks.com/en/news/patch-744","https://wikibr.pl/index.php/Bossy"],"confidence":"high"},
+  {"name":"Nidhogg instance (Under the Ice)","name_pl":"Jaskinie pod lodem (boss: Nidhogg)","level":"145","location":"Frozen Lake, Dmorther (shortcut from the bridge added 7.42)","bosses":["Nidhogg"],"modes_available":["discovery","adventure","challenge"],"rares":["Exuvium","Snout","Claws"],"loot":{"discovery":[],"adventure":["Level 40-80 synergetics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 60 (ice bosses)"]},"notes":"One of the three \"Under the Ice\" boss instances; Discovery + Challenge added in patch 6.29. Discovery has extra mob groups but lower XP per mob (8.52).","sources":["https://brokenranks.fandom.com/wiki/Nidhogg","https://brokenranks.com/en/news/patch-629","https://brokenranks.com/en/news/community-update-852","https://brokenranks.com/en/news/patch-744","https://wikibr.pl/index.php/Bossy"],"confidence":"high"},
+  {"name":"Hvar instance (volcano)","name_pl":"Wulkan Hvara","level":"Adventure 90-130, Challenge 120-140; not below 80","location":"Hvar's Wastelands (Northern Alaril), via Dmorther Garrison; entry item from Zenlin (5 Ice Power Cores + 50,000 gold)","bosses":["Hvar"],"modes_available":["adventure","challenge"],"rares":["World Shatterer","Hvarions","Scornaxes","Furions"],"loot":{"discovery":[],"adventure":[],"challenge":["Grandmaster Glyphs (patch 8.48)"]},"notes":"Solo instance with two difficulty levels only (Adventure, Challenge). Gear required level 90/95.","sources":["https://brokenranks.com/en/news/welcome-to-hvars-wastelands","https://brokenranks.com/en/news/update-847","https://brokenranks.com/en/news/patch-848","https://broken-ranks.fandom.com/pl/wiki/Hvar"],"confidence":"high"},
+  {"name":"Angvalf-Htaga instance (Angvalf-Htaga's Prison)","name_pl":"Więzienie Angwalf-Htaga","level":"145","location":"Dmorther zone","bosses":["Angvalf-Htaga"],"modes_available":["adventure","challenge"],"rares":["Vorleah","Dmorlung","Angwallion","Htagan"],"loot":{"discovery":[],"adventure":["Synergetics above level 60 (50/60 removed in 7.44)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 40","Synergetics above level 60 (60 removed in 7.44)"]},"notes":"Path of Challenge added in patch 6.33 (no Discovery).","sources":["https://brokenranks.fandom.com/wiki/Angvalf-Htaga","https://brokenranks.com/en/news/patch-633","https://brokenranks.com/en/news/patch-744"],"confidence":"high"},
+  {"name":"Draugul instance","name_pl":"Miasto Draugula","level":"145","location":"Dmorther zone; entry needs major flasks and a Time Crystal (9.54)","bosses":["Draugul"],"modes_available":["adventure","challenge"],"rares":["Draugul's Hatred","Envils","Draugul's Pledge","Doom of the People"],"loot":{"discovery":[],"adventure":["Synergetics above level 60 (50/60 removed 7.44)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 100","Synergetics above level 70 (60/70 removed 7.44)"]},"notes":"Path of Challenge added in patch 6.30 (no Discovery).","sources":["https://brokenranks.fandom.com/wiki/Draugul","https://brokenranks.com/en/news/a-handful-of-information-about-patch-630","https://brokenranks.com/en/news/patch-744","https://brokenranks.com/en/news/patch-954"],"confidence":"high"},
+  {"name":"Greater Hawk instance","name_pl":"Gniazdo Jastrzębiora (boss: Jastrzębior)","level":"175","location":"Beirn - opened during a dynamic event; Greater Hawk Bait","bosses":["Greater Hawk"],"modes_available":["adventure","challenge"],"rares":["Taehal","Claws","Erbails","Alenders"],"loot":{"discovery":[],"adventure":["Tracks","Drifs (drop bug fixed in 9.55)"],"challenge":[]},"notes":"Instance on Adventure + Challenge added in patch 9.54; random open-world Greater Hawk drops the Adventure loot.","sources":["https://brokenranks.fandom.com/wiki/Greater_Hawk","https://brokenranks.com/en/news/patch-954","https://brokenranks.com/en/news/patch-955"],"confidence":"high"},
+  {"name":"Selena instance","name_pl":"Cmentarz Seleny","level":"175","location":"Beirn; normal entrance since 6.33 (Selena's Returns quest removed)","bosses":["Selena"],"modes_available":["adventure","challenge"],"rares":["Mallus Selenorum","Selena's Heart","Selena's Dread","Selena's Shame","Ariarches","Undurises"],"loot":{"discovery":[],"adventure":["Ducats","Essences","Shards","Synergetics above 70 (60/70 removed 7.44)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 750","Ducats","Essences","Shards","No inhibitors (7.44)","Synergetics above 70"]},"notes":"Path of Challenge added in patch 6.33 (no Discovery). Polish location from wikibr (Cmentarz Seleny = Selena's Cemetery, my translation).","sources":["https://brokenranks.fandom.com/wiki/Selena","https://brokenranks.com/en/news/patch-633","https://brokenranks.com/en/news/patch-744","https://wikibr.pl/index.php/Bossy"],"confidence":"high"},
+  {"name":"Utorian Admiral instance (Admiral's Ship)","name_pl":"Statek Admirała (boss: Admirał Utoru)","level":"175","location":"Beirn - portal opened by Hengis (Ring of Transportation)","bosses":["Utorian Admiral"],"modes_available":["adventure","challenge"],"rares":["Admiral Trident","Seimhi Claws","Admiral's Ermine Robe","Keel","Inavoxes","Takerons"],"loot":{"discovery":[],"adventure":["Synergetics above 70 (60/70 removed 7.44)","Synergetics from Utorian officers (6.30)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 500","More gold on deck (7.44)","Synergetics above 80 (70/80 removed 7.44)"]},"notes":"Path of Challenge added in patch 6.30 (no Discovery).","sources":["https://brokenranks.fandom.com/wiki/Utorian_Admiral","https://brokenranks.com/en/news/a-handful-of-information-about-patch-630","https://brokenranks.com/en/news/patch-630","https://brokenranks.com/en/news/patch-744"],"confidence":"high"},
+  {"name":"Lugus instance (Morana's Palace)","name_pl":"Pałac Morany (boss: Lugus)","level":"170","location":"Beirn - Morana's Palace (Winter Shard needed)","bosses":["Lugus"],"modes_available":["adventure","challenge"],"rares":["Sufferers","Torments","Thorn","Pain"],"loot":{"discovery":[],"adventure":["Synergetics above 70 (60/70 removed 7.44)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)","Synergetics above 80 (70/80 removed 7.44)"]},"notes":"Hard level only (6.29) = Adventure + Challenge. Lugus ALSO spawns once a week in the open-world Beirn Dungeons (see that entry).","sources":["https://brokenranks.fandom.com/wiki/Lugus","https://brokenranks.com/en/news/gear-incrustation-and-instance-difficulty-levels","https://brokenranks.com/en/news/patch-629","https://brokenranks.com/en/news/patch-744","https://wikibr.pl/index.php/Bossy"],"confidence":"high"},
+  {"name":"Morana instance (Morana's Palace)","name_pl":"Pałac Morany","level":"180","location":"Beirn - across the bridge (Gate to the Death Incarnate event); Winter Shard","bosses":["Morana"],"modes_available":["adventure","challenge"],"rares":["Morana's Love","Morana's Memory","Aeterus Passio","Morana's Embrace"],"loot":{"discovery":[],"adventure":["5 Tracks (4 before 7.44)","Synergetics above 70"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)","Synergetics above 80"]},"notes":"Hard level only (6.29) = Adventure + Challenge.","sources":["https://brokenranks.fandom.com/wiki/Morana","https://brokenranks.fandom.com/wiki/Morana's_Palace","https://brokenranks.com/en/news/patch-629","https://brokenranks.com/en/news/patch-744"],"confidence":"high"},
+  {"name":"Tarul and Mahet instance (Tarul's City)","name_pl":"Miasto Tarula","level":"175 (Mahet) / 190 (Tarul)","location":"Beirn - needs Time Slivers (9.54); full party with no repeated class","bosses":["Mahet","Tarul"],"modes_available":["adventure","challenge"],"rares":["Dorbis","Ortasis","Arhauts","Temars (Mahet)","Tarul's Shadow","Zeeraks","Salmurn","Zalla (Tarul)"],"loot":{"discovery":[],"adventure":["Ducats","High-level synergetics (60/70 removed 7.44)","Inhibitors (reduced)","Essences","Dviggs","Journeyman Glyphs (reduced)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill) - 275","Ducats","High-level synergetics (60/70 removed 7.44)","Tracks of Terror (reduced)"]},"notes":"Path of Challenge added for Mahet and Tarul in patch 6.31. Reols removed from Challenge (7.42).","sources":["https://brokenranks.fandom.com/wiki/Tarul","https://brokenranks.fandom.com/wiki/Mahet","https://brokenranks.com/en/news/patch-631","https://brokenranks.com/en/news/patch-744","https://brokenranks.com/en/news/patch-742"],"confidence":"high"},
+  {"name":"Sidraga instance","name_pl":"Siedziba Sidragi","level":"135+ (wikibr lists boss 200)","location":"Mountainside (Dmorther) - full party, no repeated class","bosses":["Sidraga","Sidraga's Chosen (elites)"],"modes_available":[],"rares":["Gift of the Winged Lady","Remigeses","Hellar's Judgment","Vengur","Voglers"],"loot":{"discovery":[],"adventure":[],"challenge":[]},"notes":"No difficulty paths. Rares moved down to tier T4 with In Cold Blood (11.60); drop chance cut ~25% in 11.62.","sources":["https://brokenranks.com/en/news/update---the-winged-lady-and-the-gear-reform","https://brokenranks.com/en/news/update-627","https://brokenranks.com/en/news/update-1160","https://brokenranks.com/en/news/patch-1162"],"confidence":"high"},
+  {"name":"Volkhard's Monastery","name_pl":"Klasztor Volkharda","level":"140 (~20k Might recommended)","location":"Monastery Grounds; Vampire Blood bundle of 7 entries/week from Lorvend","bosses":["Volkhard"],"modes_available":[],"rares":["Praetoris","Exarchius","Arcana","Sacrigar"],"loot":{"discovery":[],"adventure":[],"challenge":[]},"notes":"In Cold Blood endgame party instance (May 2026). No difficulty paths mentioned. Special loot tier above T4.","sources":["https://brokenranks.com/en/news/in-cold-blood---a-new-endgame-update-for-the-mmorpg-broken-ranks","https://brokenranks.com/en/news/update-1160","https://wikibr.pl/index.php/Bossy"],"confidence":"high"},
+  {"name":"Beirn Dungeons (open area)","name_pl":"Lochy","level":"~170","location":"Beirn","bosses":["Lugus (open-world weekly spawn, weekend window)"],"modes_available":[],"rares":[],"loot":{"discovery":[],"adventure":[],"challenge":[]},"notes":"NOT an instance and has no difficulty paths - this is the 'Dungeons' area the champion list refers to. Lugus spawns here on a set weekday; champions here: Astronomer (Astronom), Lugus's Smith / Lugus's Guard (Kowal / Straż Lugusa, alternating every 5h31m), and Żerca - my reading is that Żerca is the Polish name of 'Pagan Priest' (no source states it). Patch 7.44: Lugus's Guard and Smith drop Selena set parts. Dark Wisp also lives here.","sources":["https://wikibr.pl/index.php/Respawn","https://brokenranks.com/en/news/patch-744","https://brokenranks.com/en/news/patch-956","https://brokenranks.com/en/news/patch-629"],"confidence":"medium"}
+];
+const dunList = document.getElementById("dun-list");
+const dunFilter = document.getElementById("dun-filter");
+const dunToggle = document.getElementById("dun-toggle");
+let dunQuery = "";
+function dungeonEntries() {
+  const added = [...new Set(Object.keys(shared).filter(k => k.startsWith("dungeons/x")).map(k => k.split("/")[1]))].sort();
+  return [...DUNGEONS.map((d, i) => ["b" + i, d]), ...added.map(id => [id, null])];
+}
+function renderDungeons() {
+  const open = new Set([...dunList.querySelectorAll("details[open]")].map(d => d.dataset.id));
+  dunList.innerHTML = dungeonEntries().map(([id, d]) => {
+    const p = `dungeons/${id}/`, plain = !d;
+    const def = f => !d ? "" : Array.isArray(d[f]) ? d[f].join("|") : (d[f] || "");
+    const lootDef = m => d ? ((d.loot && d.loot[m]) || []).join("|") : "";
+    const name = val(p + "name", def("name")), level = val(p + "level", def("level")), loc = val(p + "location", def("location"));
+    const bosses = items(p + "bosses", def("bosses")), rares = items(p + "rares", def("rares"));
+    const paths = d && d.modes_available && d.modes_available.length ? d.modes_available : null;
+    const text = [name, d && d.name_pl, level, loc, ...bosses, ...rares, ...MODES.flatMap(([m]) => items(`${p}loot/${m}`, lootDef(m)))].join(" ").toLowerCase();
+    const list = (k, dd) => ed(k, dd, { list: true, items: true, plain });
+    const src = d && (d.notes || (d.sources && d.sources.length)) ? `<p class="dun-src">${d.confidence ? `<span class="conf conf-${esc(d.confidence)}">${esc(d.confidence)} confidence</span> ` : ""}${esc(d.notes || "")}${
+      d.sources && d.sources.length ? ` Sources: ${d.sources.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">${i + 1}</a>`).join(", ")}` : ""}</p>` : "";
+    return `<details class="dun" data-id="${id}" data-text="${esc(text)}"${open.has(id) ? " open" : ""}>
+      <summary><span class="dun-name">${esc(name || "Unnamed dungeon")}</span>
+        <span class="dun-meta">${[level && "level " + esc(level), esc(loc)].filter(Boolean).join(" · ")}</span>
+        ${paths ? `<span class="dun-paths">${MODES.map(([m, label]) => `<i class="pip mode-${m}${paths.includes(m) ? "" : " off"}" title="${label}${paths.includes(m) ? "" : " not available"}">${label[0]}</i>`).join("")}</span>` : ""}
+        <span class="dun-count">${bosses.length} boss${bosses.length === 1 ? "" : "es"}</span></summary>
+      <div class="dun-body">
+        <div class="dun-fields edit-only">
+          <span class="lbl">Name</span>${ed(p + "name", def("name"), { plain })}
+          <span class="lbl">Level</span>${ed(p + "level", def("level"), { plain })}
+          <span class="lbl">Location</span>${ed(p + "location", def("location"), { plain })}
+        </div>
+        <div class="loot">
+          <div><h3>Bosses</h3>${list(p + "bosses", def("bosses"))}</div>
+          <div><h3>Boss rares <span class="dim">· any path</span></h3>${list(p + "rares", def("rares"))}</div>
+          <div><h3>${d && d.name_pl ? "Polish name" : "Paths"}</h3><span class="dim">${d && d.name_pl ? esc(d.name_pl) : paths ? paths.map(m => MODES.find(x => x[0] === m)[1]).join(", ") : "Not confirmed"}</span></div>
+        </div>
+        <div class="loot">${MODES.map(([m, label]) => {
+          const off = paths && !paths.includes(m) && !items(`${p}loot/${m}`, lootDef(m)).length;
+          return `<div><h3 class="mode-${m}">${label} loot</h3>${off ? `<span class="dim">No ${label} path</span>` : list(`${p}loot/${m}`, lootDef(m))}</div>`;
+        }).join("")}</div>
+        ${src}
+        ${d ? "" : `<div class="edit-only"><button class="act small danger" type="button" data-dun-del="${id}">Delete dungeon</button></div>`}
+      </div></details>`;
+  }).join("");
+  applyDunFilter();
+}
+// a search opens every dungeon it matches and marks the matching names and items; clearing it closes them again
+function applyDunFilter() {
+  const q = dunFilter.value.trim().toLowerCase();
+  const all = [...dunList.querySelectorAll("details.dun")];
+  let shown = 0;
+  all.forEach(det => {
+    const match = !q || det.dataset.text.includes(q);
+    det.hidden = !match;
+    if (match) shown++;
+    if (q && match && q !== dunQuery) det.open = true;
+    det.querySelectorAll(".it, .dun-name").forEach(el => el.classList.toggle("hit", !!q && el.textContent.toLowerCase().includes(q)));
+  });
+  if (!q && dunQuery) all.forEach(det => det.open = false);
+  dunQuery = q;
+  const empty = document.getElementById("dun-empty");
+  empty.hidden = shown > 0 || !!document.getElementById("dun-draft");
+  empty.textContent = all.length ? `No dungeon, boss or loot matches "${dunFilter.value.trim()}".`
+    : "No dungeons yet. Unlock editing and click Add dungeon to add one.";
+  updateDunToggle();
+}
+function updateDunToggle() {
+  const vis = [...dunList.querySelectorAll("details.dun:not([hidden])")];
+  dunToggle.textContent = vis.length && vis.every(d => d.open) ? "Collapse all" : "Expand all";
+}
+dunFilter.addEventListener("input", applyDunFilter);
+dunList.addEventListener("toggle", updateDunToggle, true);
+dunToggle.addEventListener("click", () => {
+  const vis = [...dunList.querySelectorAll("details.dun:not([hidden])")], open = !vis.every(d => d.open);
+  vis.forEach(d => d.open = open);
+  updateDunToggle();
+});
+document.getElementById("dun-add").addEventListener("click", () => {
+  const existing = document.getElementById("dun-draft");
+  if (existing) return existing.querySelector("input").focus();
+  const f = document.createElement("form");
+  f.id = "dun-draft"; f.className = "dun-draft";
+  f.innerHTML = `<input class="cinput" id="dun-new-name" placeholder="Dungeon name" aria-label="New dungeon name">
+    <button class="act small" type="submit">Save</button><button class="act small" type="button" data-cancel>Cancel</button>`;
+  dunList.before(f);
+  document.getElementById("dun-empty").hidden = true;
+  const input = f.querySelector("input");
+  input.focus();
+  const cancel = () => { f.remove(); applyDunFilter(); };
+  f.querySelector("[data-cancel]").addEventListener("click", cancel);
+  input.addEventListener("keydown", e => { if (e.key === "Escape") cancel(); });
+  f.addEventListener("submit", async e => {
+    e.preventDefault();
+    const name = input.value.trim();
+    if (!name) { note("Give the dungeon a name first.", true); return input.focus(); }
+    const id = "x" + Date.now().toString(36), k = `dungeons/${id}/name`;
+    f.querySelectorAll("input, button").forEach(x => x.disabled = true);
+    try { await npcWrite("PUT", k, name); shared[k] = name; }
+    catch (err) { note(err.message, true); f.querySelectorAll("input, button").forEach(x => x.disabled = false); return; }
+    f.remove();
+    renderDungeons();
+    const det = dunList.querySelector(`details[data-id="${id}"]`);
+    if (det) { det.hidden = false; det.open = true; det.scrollIntoView({ block: "nearest" }); }
+    note(`Added ${name} for everyone. Click the dashes to fill in its bosses and loot.`);
+  });
+});
+// only dungeons added on the page can be deleted; built-in ones are corrected instead
+dunList.addEventListener("click", async e => {
+  const b = e.target.closest("[data-dun-del]");
+  if (!b) return;
+  const id = b.dataset.dunDel, name = val(`dungeons/${id}/name`, "") || "that dungeon";
+  if (b.dataset.armed !== "1") {
+    b.dataset.armed = "1"; b.textContent = "Confirm delete";
+    setTimeout(() => { if (b.isConnected) { b.dataset.armed = ""; b.textContent = "Delete dungeon"; } }, 3000);
+    return;
+  }
+  b.disabled = true;
+  try {
+    for (const k of Object.keys(shared).filter(k => k.startsWith(`dungeons/${id}/`))) { await npcWrite("DELETE", k); delete shared[k]; }
+    note(`Deleted ${name} for everyone.`);
+  } catch (err) { note(err.message, true); }
+  renderDungeons();
 });
 
 /* ---------- shards ---------- */
