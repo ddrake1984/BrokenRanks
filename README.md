@@ -32,6 +32,11 @@ hold what sources mention; Discovery loot is mostly unknown. Collapsible, search
 boss or item; corrections and added dungeons are shared (`dungeons/<id>/<field>` keys, PIN).
 Entries read off the in-game instance window are marked "verified in game" (so far: Bandit Tower).
 
+Loot shows each item once with D A C marks for the paths that list it. Items with known stats
+(`ITEMS` in `index.html`, copied from the game's tooltips) render as full cards in their rarity
+colour: blue for rares, yellow for epics. A search that doesn't match a dungeon's name, location
+or bosses narrows the loot to matching items, so `power` lists only the gear with Power on it.
+
 ## Respawn timers
 
 Each champion has a **Start** button: click it when the champion dies. It counts down to the earliest

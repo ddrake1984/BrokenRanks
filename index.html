@@ -21,6 +21,9 @@
   --bronze: #c48a68;
   --silver: #b9bdc6;
   --gold: #d6b04a;
+  --rare: #3fb4ea;
+  --epic: #f2e21c;
+  --stat: #e2d27a;
   --display: "Cinzel", Georgia, serif;
   --body: "Fira Sans Condensed", "Arial Narrow", system-ui, sans-serif;
   --mono: "Fira Mono", ui-monospace, Consolas, monospace;
@@ -145,6 +148,24 @@ details.dun > summary:focus-visible { outline: 2px solid var(--listen); outline-
 .pip { font: 600 .68rem var(--mono); font-style: normal; width: 1.5em; text-align: center; border: 1px solid; border-radius: 2px; }
 .pip.mode-discovery { color: var(--open); } .pip.mode-adventure { color: var(--listen); } .pip.mode-challenge { color: var(--clash); }
 .pip.off { color: var(--line); }
+.dun-body [hidden] { display: none !important; }
+.items { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 10px; margin-top: 4px; }
+.item { background: var(--bg); border: 1px solid var(--line); padding: 9px 11px 10px; font-size: .86rem; }
+.item-head { display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px; }
+.item-head .dun-paths { margin-left: auto; }
+.item-name { font-weight: 600; font-size: .98rem; }
+.r-rare { color: var(--rare); } .r-epic { color: var(--epic); }
+.item-rank { color: var(--fg); }
+.item dl { margin: 0; display: grid; gap: 1px; }
+.item .st { display: flex; justify-content: space-between; gap: 10px; }
+.item dt { color: var(--stat); } .item dd { margin: 0; font-family: var(--mono); font-size: .82rem; }
+.item-meta { padding-bottom: 6px; margin-bottom: 6px !important; border-bottom: 1px solid var(--line); }
+.item-meta dt { color: var(--muted); }
+.item-gold { color: var(--gold); }
+.item-note { color: var(--muted); margin: 0 0 6px; }
+.item-choices { margin: 0; padding: 0; list-style: none; columns: 2; }
+.loot-lines { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+.loot-line { display: flex; gap: 10px; align-items: baseline; }
 .paths-guide { background: var(--panel); border: 1px solid var(--line); margin-bottom: 14px; color: var(--muted); font-size: .88rem; }
 .paths-guide summary { cursor: pointer; padding: 8px 14px; color: var(--fg); }
 .paths-guide ul { margin: 0; padding: 0 14px 12px 32px; max-width: 90ch; display: grid; gap: 4px; }
@@ -247,9 +268,9 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
   <!-- DUNGEONS -->
   <div role="tabpanel" id="dungeons" aria-labelledby="tab-dungeons" hidden>
     <div class="bar">
-      <p class="hint">Click a dungeon to open its bosses and the loot for Discovery, Adventure and Challenge. Search finds a dungeon, boss or item and opens the dungeons that have it. With editing unlocked, click any value to correct it, or add a dungeon. Lists are edited separated by semicolons.</p>
+      <p class="hint">Click a dungeon to open its bosses and the loot for Discovery, Adventure and Challenge. Search finds a dungeon or boss, or narrows the loot to matching items: try a stat such as <i>Power</i> or <i>Knowledge</i>, or an item type such as <i>Rings</i>. With editing unlocked, click any value to correct it, or add a dungeon. Lists are edited separated by semicolons.</p>
       <div class="tools">
-        <input class="filter" id="dun-filter" type="search" placeholder="Search dungeon, boss or loot" aria-label="Search dungeons">
+        <input class="filter" id="dun-filter" type="search" placeholder="Search dungeon, boss, item or stat" aria-label="Search dungeons">
         <button class="act" id="dun-toggle" type="button">Expand all</button>
         <button class="act edit-only" id="dun-add" type="button">Add dungeon</button>
       </div>
@@ -994,6 +1015,64 @@ npcBody.addEventListener("click", async e => {
 // added dungeons live in the shared store as dungeons/<id>/<field>: built-in ids are b0, b1…,
 // added ones are x + the time they were added in base 36.
 const MODES = [["discovery", "Discovery"], ["adventure", "Adventure"], ["challenge", "Challenge"]];
+// Item stats as the game's tooltip shows them, keyed by the name a loot list uses. A loot entry whose
+// name is here renders as a full card; anything else stays a plain line. Colour follows the game:
+// rare (blue) or epic (yellow). Add items from screenshots of the instance window's tooltips.
+const ITEMS = {
+  "Epic weapon": { rarity: "epic", cat: "Epic weapons", note: "You have a chance to loot one of the epic weapons. Each class has one.",
+    choices: ["Wurm", "Lantern of Life", "Gorthdar", "Attawa", "Imisindo", "Allenor", "Washi"] },
+  "Cleaver": { rank: "II", rarity: "rare", cat: "Two-Handed Axes", value: 56000, weight: 40, charges: 3000, level: 22, req: ["strength", 25],
+    dmgType: "Slashing", dmg: 83, stats: [["Strength", 13], ["HP", 30], ["Stamina", 60]] },
+  "Steroid": { rank: "II", rarity: "rare", cat: "Belts", value: 72000, weight: 10, charges: 3000, level: 24, req: ["strength", 25],
+    stats: [["Strength", 8], ["Dexterity", 5], ["HP", 110]] },
+  "Bartaur": { rank: "II", rarity: "rare", cat: "Armor", value: 72000, weight: 15, charges: 3000, level: 24, req: ["knowledge", 25],
+    stats: [["Power", 5], ["Knowledge", 8], ["Mana", 50], ["Armor against slashing", 25], ["Armor against crushing", 25], ["Armor against piercing", 25]] },
+  "Khalam": { rank: "III", rarity: "rare", cat: "Helmets", value: 136000, weight: 8, charges: 3000, level: 32, req: ["knowledge", 35],
+    stats: [["Power", 6], ["Knowledge", 8], ["Mana", 60], ["Armor against slashing", 25], ["Armor against crushing", 25], ["Armor against piercing", 25], ["Mental resistance", 20]] },
+  "Tetanus": { rank: "III", rarity: "rare", cat: "Staves", value: 136000, weight: 5, charges: 3000, level: 32, req: ["knowledge", 35],
+    dmgType: "Piercing", dmg: 95, stats: [["Power", 4], ["Knowledge", 9], ["HP", 90], ["Mana", 40], ["Mental resistance", 20]] },
+  "Karlder": { rank: "III", rarity: "rare", cat: "Rings", value: 152000, weight: 2, charges: 3000, level: 34, req: ["strength", 35],
+    stats: [["Strength", 9], ["Dexterity", 8], ["HP", 40], ["Stamina", 10], ["Energy resistance", 20], ["Mental resistance", 20]] },
+  "Sidun": { rank: "III", rarity: "rare", cat: "Two-Handed Swords", value: 152000, weight: 20, charges: 3000, level: 34, req: ["strength", 35],
+    dmgType: "Slashing", dmg: 107, stats: [["Strength", 19], ["HP", 100], ["Stamina", 50]] },
+  "Lysmars": { rank: "III", rarity: "rare", cat: "Boots", value: 152000, weight: 6, charges: 3000, level: 34, req: ["power", 35],
+    stats: [["Power", 8], ["Knowledge", 2], ["HP", 80], ["Mana", 60], ["Armor against slashing", 29], ["Armor against crushing", 27], ["Armor against piercing", 29]] },
+  "Brunnle": { rank: "III", rarity: "rare", cat: "Armor", value: 152000, weight: 30, charges: 3000, level: 34, req: ["strength", 35],
+    stats: [["Strength", 7], ["Dexterity", 5], ["HP", 60], ["Stamina", 40], ["Armor against slashing", 29], ["Armor against crushing", 31], ["Armor against piercing", 30]] }
+};
+// "Cleaver (Babadek)" and "Cleaver [II] - axe" both name the Cleaver
+const itemBase = s => s.split(/\s+[\[(\-]|,/)[0].trim();
+const pipsFor = ms => `<span class="dun-paths">${MODES.map(([m, label]) => `<i class="pip mode-${m}${ms.includes(m) ? "" : " off"}" title="${label}${ms.includes(m) ? "" : ": not listed"}">${label[0]}</i>`).join("")}</span>`;
+const gold = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+function itemCard(name, it, ms) {
+  const head = `<div class="item-head"><span class="item-name r-${it.rarity}" title="${esc(it.rarity)}">${esc(name)}</span>${it.rank ? ` <span class="item-rank">[${it.rank}]</span>` : ""}${pipsFor(ms)}</div>`;
+  if (it.choices) return `<div class="item unit" data-text="${esc([name, it.rarity, it.cat, ...it.choices].join(" ").toLowerCase())}">${head}
+    <p class="item-note">${esc(it.note)}</p><ul class="item-choices">${it.choices.map(c => `<li class="st r-${it.rarity}">${esc(c)}</li>`).join("")}</ul></div>`;
+  const row = (l, v, cls = "") => `<div class="st${cls}"><dt>${esc(l)}</dt><dd>${v}</dd></div>`;
+  const meta = [row("Category", esc(it.cat)), row("Value", `<span class="item-gold">${gold(it.value)} gold</span>`), row("Weight", it.weight),
+    row("Charges", it.charges), row("Required level", it.level), it.req && row("Required " + it.req[0], it.req[1])].filter(Boolean);
+  const stats = [it.dmgType && row("Damage Type", esc(it.dmgType)), it.dmg && row("Damage", it.dmg),
+    ...(it.stats || []).map(([s, v]) => row(s, (v > 0 ? "+" : "") + v))].filter(Boolean);
+  const text = [name, it.rank, it.rarity, it.cat, it.req && "required " + it.req[0], it.dmgType, ...(it.stats || []).map(s => s[0])];
+  return `<div class="item unit" data-text="${esc(text.filter(Boolean).join(" ").toLowerCase())}">${head}
+    <dl class="item-meta">${meta.join("")}</dl><dl class="item-stats">${stats.join("")}</dl></div>`;
+}
+// one view of a dungeon's loot: each item once, with the paths that list it
+function lootView(p, lootDef) {
+  const seen = new Map();
+  MODES.forEach(([m]) => items(`${p}loot/${m}`, lootDef(m)).forEach(raw => {
+    const key = ITEMS[itemBase(raw)] ? itemBase(raw) : raw;
+    if (!seen.has(key)) seen.set(key, { raw, modes: [] });
+    seen.get(key).modes.push(m);
+  }));
+  if (!seen.size) return `<span class="dim">No loot recorded yet.</span>`;
+  const cards = [], lines = [];
+  for (const [key, { raw, modes }] of seen) {
+    if (ITEMS[key]) cards.push(itemCard(key, ITEMS[key], modes));
+    else lines.push(`<li class="loot-line unit" data-text="${esc(raw.toLowerCase())}">${pipsFor(modes)}<span>${esc(raw)}</span></li>`);
+  }
+  return (cards.length ? `<div class="items">${cards.join("")}</div>` : "") + (lines.length ? `<ul class="loot-lines">${lines.join("")}</ul>` : "");
+}
 const DUNGEONS = [
   {"name":"Chieftain instance (Chieftain's Cave)","name_pl":"Jaskinia Herszta / Siedziba Herszta (boss: Herszt)","level":"22 (suggested 14+)","location":"Trentis zone - through the Southern Cave west of the Fishermen Village","bosses":["Chieftain"],"modes_available":["adventure"],"rares":["Derengil","Sturprang","Mayarot"],"loot":{"discovery":[],"adventure":["Level 20 synergetics (wikibr)"],"challenge":[]},"notes":"No difficulty paths found for this instance in any patch note; treated as single (base) difficulty. wikibr.pl lists only Derengil as the current rare, the English fandom wiki lists three - rare list may be outdated.","sources":["https://brokenranks.fandom.com/wiki/Chieftain","https://brokenranks.fandom.com/wiki/Chieftain's_Cave","https://wikibr.pl/index.php/Siedziba_Herszta","https://wikibr.pl/index.php/Bossy"],"confidence":"medium"},
   {"name":"Cross-Spider instance (Cross-Spider Tunnel)","name_pl":"Tunel Krzyżaka (boss: Krzyżak)","level":"30 (suggested 16-30)","location":"Trentis zone - Swamp, via the Spider Tunnels, west to the tunnel entrance","bosses":["Cross Spider"],"modes_available":["adventure"],"rares":["Arcanscape","Martumal","Ayol"],"loot":{"discovery":[],"adventure":["Level 20 synergetics (wikibr)"],"challenge":[]},"notes":"No difficulty paths found; single difficulty. Fandom page also shows Gaurala/Talgunds/Dahadi images under \"Loot Drops\" (unclear, likely synergetics/old data).","sources":["https://brokenranks.fandom.com/wiki/Cross_Spider","https://wikibr.pl/index.php/Tunel_Krzy%C5%BCaka","https://wikibr.pl/index.php/Bossy"],"confidence":"medium"},
@@ -1001,7 +1080,7 @@ const DUNGEONS = [
   {"name":"Elemental Specters instance (Specters Tomb)","name_pl":"Grobowiec Duchów Żywiołów (Duch Ognia / Duch Zimna / Duch Energii)","level":"60 (suggested 27+)","location":"Trentis zone - Castle Gastelhof area; entry guarded by Gatekeepers (Furtians); Claudius's Grand Rune gives corridor immunity","bosses":["Fire Specter","Ice Specter","Energy Specter"],"modes_available":["discovery","adventure","challenge"],"rares":["Pyroclast","Brassars","Uguns (Fire)","Ishelm","Isthrimm","Isverd (Ice)","Fulgur","Radius Electricum","Sphaera (Energy)"],"loot":{"discovery":[],"adventure":["Level 20-30 synergetics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)"]},"notes":"Got easy+hard (Discovery+Challenge) in patch 6.29. Patch 10.57 raised rare drop rate here; patch 11.61 removed pet items Hussarion and Basteya from its loot.","sources":["https://brokenranks.fandom.com/wiki/Bosses","https://brokenranks.fandom.com/wiki/Fire_Specter","https://wikibr.pl/index.php/Grobowiec_Duch%C3%B3w","https://brokenranks.com/en/news/patch-629","https://brokenranks.com/en/news/update-1057","https://brokenranks.com/en/news/patch-1161"],"confidence":"high"},
   {"name":"Toad instance","name_pl":"Żabi Raj / Bagno Ropuchy (boss: Ropucha)","level":"30 (suggested 30+)","location":"Southern Alaril - Mire; requires Depths of Breath (Zohar, Druid Village, 3,500 gold)","bosses":["Toad"],"modes_available":["adventure","challenge"],"rares":["Crest","Basileus","Marshes","Fraxes"],"loot":{"discovery":[],"adventure":["Level 20-30 synergetics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)"]},"notes":"Path of Challenge added in patch 6.31 (\"path of challenge only\"), so Adventure + Challenge. wikibr says it is a single-player instance. English location name not found (Żabi Raj = \"Frog Paradise\", my translation).","sources":["https://brokenranks.fandom.com/wiki/Toad","https://wikibr.pl/index.php/%C5%BBabi_Raj","https://brokenranks.com/en/news/patch-631","https://wikibr.pl/index.php/Bossy"],"confidence":"medium"},
   {"name":"Ichtion instance (Shipwreck)","name_pl":"Wrak Statku / Statek Ichtiona (boss: Ichtion)","level":"45 (suggested 22+)","location":"Southern Alaril - the shipwreck","bosses":["Ichtion"],"modes_available":["discovery","adventure","challenge"],"rares":["Chengsveses","Fiskorl","Rolrak"],"loot":{"discovery":[],"adventure":["Level 20-30 synergetics","Epics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)","Tracks","Synergetics (rate raised in Community Update 8.52)"]},"notes":"Discovery + Challenge added in patch 6.33.","sources":["https://brokenranks.fandom.com/wiki/Ichtion","https://wikibr.pl/index.php/Wrak_Statku","https://brokenranks.com/en/news/patch-633","https://brokenranks.com/en/news/community-update-852"],"confidence":"high"},
-  {"name":"Bandit Tower","name_pl":"Wieża Ghadiry / Wieża bandytów","level":"22-50 (Challenge 32-60)","location":"Southern Alaril - Tower, Third Floor","bosses":["Babadek","Gregorius","Ghadira"],"modes_available":["discovery","adventure","challenge"],"rares":["Cleaver (Babadek)","Steroid","Bartaur","Tetanus (Gregorius)","Khalam","Sidun (Ghadira)","Karlder","Lysmars","Brunnle"],"loot":{"discovery":["Epic weapon, one per class: Wurm, Lantern of Life, Gorthdar, Attawa, Imisindo, Allenor, Washi","Cleaver [II] - two-handed axe, lvl 22, 25 str","Steroid [II] - belt, lvl 24, 25 str","Bartaur [II] - armor, lvl 24, 25 kno","Khalam [III] - helmet, lvl 32, 35 kno","Tetanus [III] - staff, lvl 32, 35 kno","Karlder [III] - ring, lvl 34, 35 str","Sidun [III] - two-handed sword, lvl 34, 35 str","Lysmars [III] - boots, lvl 34, 35 pow","Brunnle [III] - armor, lvl 34, 35 str"],"adventure":["Epic weapon, one per class: Wurm, Lantern of Life, Gorthdar, Attawa, Imisindo, Allenor, Washi","Cleaver [II] - two-handed axe, lvl 22, 25 str","Steroid [II] - belt, lvl 24, 25 str","Bartaur [II] - armor, lvl 24, 25 kno","Khalam [III] - helmet, lvl 32, 35 kno","Tetanus [III] - staff, lvl 32, 35 kno","Karlder [III] - ring, lvl 34, 35 str","Sidun [III] - two-handed sword, lvl 34, 35 str","Lysmars [III] - boots, lvl 34, 35 pow","Brunnle [III] - armor, lvl 34, 35 str"],"challenge":["Epic weapon, one per class: Wurm, Lantern of Life, Gorthdar, Attawa, Imisindo, Allenor, Washi","Cleaver [II] - two-handed axe, lvl 22, 25 str","Steroid [II] - belt, lvl 24, 25 str","Bartaur [II] - armor, lvl 24, 25 kno","Khalam [III] - helmet, lvl 32, 35 kno","Tetanus [III] - staff, lvl 32, 35 kno","Karlder [III] - ring, lvl 34, 35 str","Sidun [III] - two-handed sword, lvl 34, 35 str","Lysmars [III] - boots, lvl 34, 35 pow","Brunnle [III] - armor, lvl 34, 35 str","Daimonite (Challenge only; guaranteed for every party member present at the boss kill)","Tracks","Drifs (rates raised in Community Update 8.52)"]},"notes":"Checked in game 2026-11-03: all three paths show the same lootable gear. Party size: Discovery 2, Adventure 5, Challenge 5. Challenge costs 25 Track of Unrest. Loot chance bonus +18% on Discovery and Adventure, +28.2% on Challenge (as shown for a level-41 character). Patch 10.57 lowered the rare drop rate in the Tower.","sources":["https://brokenranks.fandom.com/wiki/Tower","https://brokenranks.fandom.com/wiki/Bosses","https://brokenranks.com/en/news/a-handful-of-information-about-patch-630","https://wikibr.pl/index.php/Wie%C5%BCa_Ghadiry_(%C5%9Acie%C5%BCka_przygody)","https://brokenranks.com/en/news/community-update-852","https://brokenranks.com/en/news/update-1057"],"confidence":"verified"},
+  {"name":"Bandit Tower","name_pl":"Wieża Ghadiry / Wieża bandytów","level":"22-50 (Challenge 32-60)","location":"Southern Alaril - Tower, Third Floor","bosses":["Babadek","Gregorius","Ghadira"],"modes_available":["discovery","adventure","challenge"],"rares":["Cleaver (Babadek)","Steroid","Bartaur","Tetanus (Gregorius)","Khalam","Sidun (Ghadira)","Karlder","Lysmars","Brunnle"],"loot":{"discovery":["Epic weapon","Cleaver","Steroid","Bartaur","Khalam","Tetanus","Karlder","Sidun","Lysmars","Brunnle"],"adventure":["Epic weapon","Cleaver","Steroid","Bartaur","Khalam","Tetanus","Karlder","Sidun","Lysmars","Brunnle"],"challenge":["Epic weapon","Cleaver","Steroid","Bartaur","Khalam","Tetanus","Karlder","Sidun","Lysmars","Brunnle","Daimonite (Challenge only; guaranteed for every party member present at the boss kill)","Tracks","Drifs (rates raised in Community Update 8.52)"]},"notes":"Checked in game 2026-11-03: all three paths show the same lootable gear. Party size: Discovery 2, Adventure 5, Challenge 5. Challenge costs 25 Track of Unrest. Loot chance bonus +18% on Discovery and Adventure, +28.2% on Challenge (as shown for a level-41 character). Patch 10.57 lowered the rare drop rate in the Tower.","sources":["https://brokenranks.fandom.com/wiki/Tower","https://brokenranks.fandom.com/wiki/Bosses","https://brokenranks.com/en/news/a-handful-of-information-about-patch-630","https://wikibr.pl/index.php/Wie%C5%BCa_Ghadiry_(%C5%9Acie%C5%BCka_przygody)","https://brokenranks.com/en/news/community-update-852","https://brokenranks.com/en/news/update-1057"],"confidence":"verified"},
   {"name":"Puppet Master instance","name_pl":"Władca Marionetek / Las Marionetek","level":"35 (meant for ~29+)","location":"Near the Druid Village - Cursed Forest, west of Turvill then the southern fork","bosses":["Puppet Master"],"modes_available":["discovery","adventure","challenge"],"rares":["Master's Gesture","Master's Collar","Promuris","Coriatula"],"loot":{"discovery":[],"adventure":["Level 20-40 synergetics","Epics (wikibr)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)"]},"notes":"Discovery + Challenge added in patch 6.30. Entourage: Barbarian, Knight, Sheed, Archer, Voodoo puppets. Patch 10.57 raised its rare drop rate and cut its XP.","sources":["https://brokenranks.com/en/news/update-puppet-master-and-the-achievements-system","https://brokenranks.com/en/news/a-handful-of-information-about-patch-630","https://broken-ranks.fandom.com/pl/wiki/W%C5%82adca_Marionetek","https://wikibr.pl/index.php/Bossy"],"confidence":"high"},
   {"name":"Geomorph instance (Golem Cave)","name_pl":"Jaskinia Golema / Jaskinia Geomorpha","level":"60 (suggested 25+)","location":"Alaril - Caves under the Marsh, eastern part near Joris","bosses":["Geomorph"],"modes_available":["discovery","adventure","challenge"],"rares":["Davgretor","Geomorph Core","Markahn","Pet rares: Erupter, Sliver, Jewel"],"loot":{"discovery":[],"adventure":["Level 20-30 synergetics","Epics","Granite (guaranteed from Rock Golems in the Right Branch)"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)"]},"notes":"Discovery + Challenge added in patch 6.29. wikibr has separate Discovery and Challenge pages; their mob drop tables match the base page. Patch 11.61 removed Hussarion/Basteya pet items from it.","sources":["https://brokenranks.fandom.com/wiki/Geomorph","https://wikibr.pl/index.php/Jaskinia_Golema_(Poznanie)","https://wikibr.pl/index.php/Jaski_Golema_(Wyzwanie)","https://brokenranks.com/en/news/patch-629"],"confidence":"high"},
   {"name":"Garthmog instance (Dragon Cave)","name_pl":"Jaskinia Smoka / Leże Garthmoga","level":"60-65 (suggested 30+)","location":"Alaril zone","bosses":["Garthmog"],"modes_available":["discovery","adventure","challenge"],"rares":["Dragon Bone","Caratris","Dragon Wing"],"loot":{"discovery":[],"adventure":["Level 20-40 synergetics","Epics (wikibr)","Track of Dread"],"challenge":["Daimonite (Challenge only; guaranteed for every party member present at the boss kill)"]},"notes":"Discovery + Challenge added in patch 6.29. Its Path of Challenge needs Tracks of Dread (rank IV-VI pool); Garthmog drops Tracks of Dread (wikibr).","sources":["https://brokenranks.fandom.com/wiki/Garthmog","https://wikibr.pl/index.php/Jaskinia_Smoka","https://wikibr.pl/index.php/Trop_l%C4%99ku","https://brokenranks.com/en/news/patch-629"],"confidence":"high"},
@@ -1051,11 +1130,11 @@ function renderDungeons() {
     const name = val(p + "name", def("name")), level = val(p + "level", def("level")), loc = val(p + "location", def("location"));
     const bosses = items(p + "bosses", def("bosses")), rares = items(p + "rares", def("rares"));
     const paths = d && d.modes_available && d.modes_available.length ? d.modes_available : null;
-    const text = [name, d && d.name_pl, level, loc, ...bosses, ...rares, ...MODES.flatMap(([m]) => items(`${p}loot/${m}`, lootDef(m)))].join(" ").toLowerCase();
+    const head = [name, d && d.name_pl, level, loc, ...bosses].join(" ").toLowerCase();
     const list = (k, dd) => ed(k, dd, { list: true, items: true, plain });
     const src = d && (d.notes || (d.sources && d.sources.length)) ? `<p class="dun-src">${d.confidence ? `<span class="conf conf-${esc(d.confidence)}">${d.confidence === "verified" ? "verified in game" : esc(d.confidence) + " confidence"}</span> ` : ""}${esc(d.notes || "")}${
       d.sources && d.sources.length ? ` Sources: ${d.sources.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">${i + 1}</a>`).join(", ")}` : ""}</p>` : "";
-    return `<details class="dun" data-id="${id}" data-text="${esc(text)}"${open.has(id) ? " open" : ""}>
+    return `<details class="dun" data-id="${id}" data-head="${esc(head)}"${open.has(id) ? " open" : ""}>
       <summary><span class="dun-name">${esc(name || "Unnamed dungeon")}</span>
         <span class="dun-meta">${[level && "level " + esc(level), esc(loc)].filter(Boolean).join(" · ")}</span>
         ${paths ? `<span class="dun-paths">${MODES.map(([m, label]) => `<i class="pip mode-${m}${paths.includes(m) ? "" : " off"}" title="${label}${paths.includes(m) ? "" : " not available"}">${label[0]}</i>`).join("")}</span>` : ""}
@@ -1067,13 +1146,14 @@ function renderDungeons() {
           <span class="lbl">Location</span>${ed(p + "location", def("location"), { plain })}
         </div>
         <div class="loot">
-          <div><h3>Bosses</h3>${list(p + "bosses", def("bosses"))}</div>
-          <div><h3>Boss rares <span class="dim">· any path</span></h3>${list(p + "rares", def("rares"))}</div>
+          <div class="dun-row"><h3>Bosses</h3>${list(p + "bosses", def("bosses"))}</div>
+          <div class="dun-row dun-rares"><h3>Boss rares <span class="dim">· any path</span></h3>${list(p + "rares", def("rares"))}</div>
           <div><h3>${d && d.name_pl ? "Polish name" : "Paths"}</h3><span class="dim">${d && d.name_pl ? esc(d.name_pl) : paths ? paths.map(m => MODES.find(x => x[0] === m)[1]).join(", ") : "Not confirmed"}</span></div>
         </div>
-        <div class="loot">${MODES.map(([m, label]) => {
+        <div class="dun-row"><h3>Loot <span class="dim">· D A C shows which paths list it</span></h3>${lootView(p, lootDef)}</div>
+        <div class="loot edit-only">${MODES.map(([m, label]) => {
           const off = paths && !paths.includes(m) && !items(`${p}loot/${m}`, lootDef(m)).length;
-          return `<div><h3 class="mode-${m}">${label} loot</h3>${off ? `<span class="dim">No ${label} path</span>` : list(`${p}loot/${m}`, lootDef(m))}</div>`;
+          return `<div><h3 class="mode-${m}">Edit ${label} loot</h3>${off ? `<span class="dim">No ${label} path</span>` : list(`${p}loot/${m}`, lootDef(m))}</div>`;
         }).join("")}</div>
         ${src}
         ${d ? "" : `<div class="edit-only"><button class="act small danger" type="button" data-dun-del="${id}">Delete dungeon</button></div>`}
@@ -1081,23 +1161,34 @@ function renderDungeons() {
   }).join("");
   applyDunFilter();
 }
-// a search opens every dungeon it matches and marks the matching names and items; clearing it closes them again
+// A search matching a dungeon's name, location or bosses shows the whole dungeon. Otherwise it shows
+// only the rares, items and loot lines that match, so "power" lists just the gear giving Power.
+// Every word must match; matching stats are marked. Clearing the search closes them again.
 function applyDunFilter() {
-  const q = dunFilter.value.trim().toLowerCase();
+  const q = dunFilter.value.trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean);
+  const has = t => words.every(w => t.includes(w));
   const all = [...dunList.querySelectorAll("details.dun")];
   let shown = 0;
   all.forEach(det => {
-    const match = !q || det.dataset.text.includes(q);
+    const units = [...det.querySelectorAll(".unit, .dun-rares .it")];
+    const whole = !words.length || has(det.dataset.head);
+    units.forEach(u => u.hidden = !whole && !has(u.dataset.text || u.textContent.toLowerCase()));
+    const match = whole || units.some(u => !u.hidden);
     det.hidden = !match;
+    det.querySelectorAll(".dun-row").forEach(r => {
+      const us = [...r.querySelectorAll(".unit, .it")];
+      r.hidden = us.length > 0 && us.every(u => u.hidden);
+    });
     if (match) shown++;
-    if (q && match && q !== dunQuery) det.open = true;
-    det.querySelectorAll(".it, .dun-name").forEach(el => el.classList.toggle("hit", !!q && el.textContent.toLowerCase().includes(q)));
+    if (words.length && match && q !== dunQuery) det.open = true;
+    det.querySelectorAll(".it, .dun-name, .item .st, .item-name, .loot-line > span:last-child").forEach(el =>
+      el.classList.toggle("hit", words.length > 0 && words.some(w => el.textContent.toLowerCase().includes(w))));
   });
   if (!q && dunQuery) all.forEach(det => det.open = false);
   dunQuery = q;
   const empty = document.getElementById("dun-empty");
   empty.hidden = shown > 0 || !!document.getElementById("dun-draft");
-  empty.textContent = all.length ? `No dungeon, boss or loot matches "${dunFilter.value.trim()}".`
+  empty.textContent = all.length ? `No dungeon, boss, item or stat matches "${dunFilter.value.trim()}".`
     : "No dungeons yet. Unlock editing and click Add dungeon to add one.";
   updateDunToggle();
 }
