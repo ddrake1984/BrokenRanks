@@ -30,6 +30,7 @@ wikibr.pl and the Broken Ranks fandom wikis; each dungeon shows its sources and 
 The game only shows full per-path loot tables in the instance entry window, so the per-path lists
 hold what sources mention; Discovery loot is mostly unknown. Collapsible, searchable by dungeon,
 boss or item; corrections and added dungeons are shared (`dungeons/<id>/<field>` keys, PIN).
+Entries read off the in-game instance window are marked "verified in game" (so far: Bandit Tower).
 
 ## Respawn timers
 
