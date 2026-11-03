@@ -30,7 +30,7 @@ wikibr.pl and the Broken Ranks fandom wikis; each dungeon shows its sources and 
 The game only shows full per-path loot tables in the instance entry window, so the per-path lists
 hold what sources mention; Discovery loot is mostly unknown. Collapsible, searchable by dungeon,
 boss or item; corrections and added dungeons are shared (`dungeons/<id>/<field>` keys, PIN).
-Entries read off the in-game instance window are marked "verified in game" (so far: Bandit Tower, Puppet Forest, Ichtion's Ship);
+Entries read off the in-game instance window are marked "verified in game" (so far: Bandit Tower, Puppet Forest, Ichtion's Ship, Garthmog's Lair);
 those drop the research extras (boss rares, Polish name, per-path edit lists, notes and sources).
 Each dungeon has a suggested level per difficulty (`dungeons/<id>/lvl/<mode>`, PIN to fill in); the
 summary line shows them once any is known, otherwise the researched level.
