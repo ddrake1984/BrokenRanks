@@ -17,8 +17,9 @@
 const ALLOWED_ORIGINS = ['https://ddrake1984.github.io'];
 // timers/champions/<group>/<row> holds the kill time (ms since epoch) of a shared respawn timer;
 // npcs/<id>/name and npcs/<id>/location are the owner's own NPC list;
-// dungeons/<id>/<field> corrects a built-in dungeon (b0, b1…) or holds one the owner added (x…)
-const KEY_RE = /^(champions|flasks|shards|timers|npcs|dungeons)\/[A-Za-z0-9 _\-\/.']{1,120}$/;
+// dungeons/<id>/<field> corrects a built-in dungeon (b0, b1…) or holds one the owner added (x…);
+// pets/<id>/<field> does the same for pets
+const KEY_RE = /^(champions|flasks|shards|timers|npcs|dungeons|pets)\/[A-Za-z0-9 _\-\/.']{1,120}$/;
 const MAX_VALUE = 2000; // a dungeon's loot list for one mode is one value
 
 /* Compare without leaking the answer in how long it took. */
