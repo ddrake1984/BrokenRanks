@@ -1181,9 +1181,11 @@ function renderDungeons() {
     const paths = d && d.modes_available && d.modes_available.length ? d.modes_available : null;
     const lvDef = m => (d && d.levels && d.levels[m]) || "", lv = m => val(`${p}lvl/${m}`, lvDef(m));
     const known = MODES.filter(([m]) => lv(m));
+    // checked in game: the loot cards say it all, so the research extras are left out
+    const verified = d && d.confidence === "verified";
     const head = [name, d && d.name_pl, level, loc, ...bosses].join(" ").toLowerCase();
     const list = (k, dd) => ed(k, dd, { list: true, items: true, plain });
-    const src = d && (d.notes || (d.sources && d.sources.length)) ? `<p class="dun-src">${d.confidence ? `<span class="conf conf-${esc(d.confidence)}">${d.confidence === "verified" ? "verified in game" : esc(d.confidence) + " confidence"}</span> ` : ""}${esc(d.notes || "")}${
+    const src = !verified && d && (d.notes || (d.sources && d.sources.length)) ? `<p class="dun-src">${d.confidence ? `<span class="conf conf-${esc(d.confidence)}">${d.confidence === "verified" ? "verified in game" : esc(d.confidence) + " confidence"}</span> ` : ""}${esc(d.notes || "")}${
       d.sources && d.sources.length ? ` Sources: ${d.sources.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">${i + 1}</a>`).join(", ")}` : ""}</p>` : "";
     return `<details class="dun" data-id="${id}" data-head="${esc(head)}"${open.has(id) ? " open" : ""}>
       <summary><span class="dun-name">${esc(name || "Unnamed dungeon")}</span>
@@ -1199,14 +1201,14 @@ function renderDungeons() {
         <div><h3>Suggested level</h3><div class="dun-lvls">${MODES.map(([m, label]) => `<div><span class="lbl lv mode-${m}">${label}</span>${paths && !paths.includes(m) && !lv(m) ? `<span class="dim">No path</span>` : ed(`${p}lvl/${m}`, lvDef(m), { plain })}</div>`).join("")}</div>${d && d.level && !known.length ? `<p class="dim" style="margin:4px 0 0">Research: ${esc(d.level)}</p>` : ""}</div>
         <div class="loot">
           <div class="dun-row"><h3>Bosses</h3>${list(p + "bosses", def("bosses"))}</div>
-          <div class="dun-row dun-rares"><h3>Boss rares <span class="dim">· any path</span></h3>${list(p + "rares", def("rares"))}</div>
-          <div><h3>${d && d.name_pl ? "Polish name" : "Paths"}</h3><span class="dim">${d && d.name_pl ? esc(d.name_pl) : paths ? paths.map(m => MODES.find(x => x[0] === m)[1]).join(", ") : "Not confirmed"}</span></div>
+          ${verified ? "" : `<div class="dun-row dun-rares"><h3>Boss rares <span class="dim">· any path</span></h3>${list(p + "rares", def("rares"))}</div>
+          <div><h3>${d && d.name_pl ? "Polish name" : "Paths"}</h3><span class="dim">${d && d.name_pl ? esc(d.name_pl) : paths ? paths.map(m => MODES.find(x => x[0] === m)[1]).join(", ") : "Not confirmed"}</span></div>`}
         </div>
         <div class="dun-row"><h3>Loot <span class="dim">· D A C shows which paths list it</span></h3>${lootView(p, lootDef)}</div>
-        <div class="loot edit-only">${MODES.map(([m, label]) => {
+        ${verified ? "" : `<div class="loot edit-only">${MODES.map(([m, label]) => {
           const off = paths && !paths.includes(m) && !items(`${p}loot/${m}`, lootDef(m)).length;
           return `<div><h3 class="mode-${m}">Edit ${label} loot</h3>${off ? `<span class="dim">No ${label} path</span>` : list(`${p}loot/${m}`, lootDef(m))}</div>`;
-        }).join("")}</div>
+        }).join("")}</div>`}
         ${src}
         ${d ? "" : `<div class="edit-only"><button class="act small danger" type="button" data-dun-del="${id}">Delete dungeon</button></div>`}
       </div></details>`;
