@@ -319,6 +319,7 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
       <summary>How pets work</summary>
       <ul id="pet-mech"></ul>
     </details>
+    <div class="chips" id="pet-sort" style="margin:0 0 14px;align-items:baseline"><span class="dim" style="margin-right:4px">Sort by</span><button class="chip" type="button" data-sort="listed">Listed</button><button class="chip" type="button" data-sort="name">Name</button><button class="chip" type="button" data-sort="level">Level</button><button class="chip" type="button" data-sort="rank">Rank</button><button class="chip" type="button" data-sort="role">Role</button><button class="chip" type="button" data-sort="attacks">Attacks</button></div>
     <div id="pet-list" class="pets"></div>
     <p class="empty" id="pet-empty" hidden></p>
   </div>
@@ -1379,7 +1380,9 @@ function renderPets() {
     const text = [name, val(p + "name_pl", def("name_pl")), ...PET_FACTS.map(([f]) => val(p + f, def(f))),
       ...PET_LISTS.flatMap(([f]) => items(p + f, def(f))), val(p + "notes", def("notes"))].join(" ").toLowerCase();
     const src = d && d.sources && d.sources.length ? ` Sources: ${d.sources.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">${i + 1}</a>`).join(", ")}` : "";
-    return `<article class="pet" data-id="${id}" data-text="${esc(text)}">
+    const firstNum = t => (String(t).match(/\d+/) || [""])[0];
+    const rank = (items(p + "stats", def("stats")).join(" ").match(/\brank\s+(\d+)/i) || [, ""])[1];
+    return `<article class="pet" data-id="${id}" data-text="${esc(text)}" data-name="${esc(name)}" data-level="${firstNum(val(p + "level", def("level")))}" data-rank="${rank}" data-role="${esc(val(p + "role", def("role")))}" data-attacks="${esc(val(p + "damage_type", def("damage_type")))}" data-listed="${id[0] === "b" ? id.slice(1) : 1e6 + parseInt(id.slice(1), 36)}">
       <header class="pet-head"><span class="pet-name">${ed(p + "name", def("name"), { plain })}</span>
         <span class="dim pet-pl">${ed(p + "name_pl", def("name_pl"), { plain })}</span>
         ${d && d.confidence ? `<span class="conf conf-${esc(d.confidence)}">${d.confidence === "verified" ? "verified in game" : esc(d.confidence) + " confidence"}</span>` : ""}</header>
@@ -1389,8 +1392,36 @@ function renderPets() {
       ${d ? "" : `<div class="edit-only"><button class="act small danger" type="button" data-pet-del="${id}">Delete pet</button></div>`}
     </article>`;
   }).join("");
+  sortPets();
   applyPetFilter();
 }
+// Listed keeps the research order (standard, guild cages, single-use, recipe, unique). Clicking the
+// active button again flips the direction. Blank values go last. Remembered per browser.
+const PET_SORT_STORE = "brokenranks-pet-sort";
+let petSort = { by: "listed", dir: 1 };
+try { petSort = JSON.parse(localStorage.getItem(PET_SORT_STORE)) || petSort; } catch (e) {}
+function sortPets() {
+  const { by, dir } = petSort, numeric = ["listed", "level", "rank"].includes(by);
+  const cards = [...petList.querySelectorAll(".pet")];
+  cards.sort((a, b) => {
+    const x = a.dataset[by], y = b.dataset[by];
+    if (!x !== !y) return x ? -1 : 1;
+    return dir * (numeric ? x - y : x.localeCompare(y, undefined, { numeric: true, sensitivity: "base" }))
+      || a.dataset.listed - b.dataset.listed;
+  });
+  cards.forEach(c => petList.appendChild(c));
+  document.querySelectorAll("#pet-sort .chip").forEach(b => {
+    const on = b.dataset.sort === by;
+    b.setAttribute("aria-pressed", on);
+    b.textContent = b.dataset.sort[0].toUpperCase() + b.dataset.sort.slice(1) + (on && by !== "listed" ? (dir > 0 ? " ▲" : " ▼") : "");
+  });
+}
+document.querySelectorAll("#pet-sort .chip").forEach(b => b.addEventListener("click", () => {
+  const by = b.dataset.sort;
+  petSort = { by, dir: petSort.by === by && by !== "listed" ? -petSort.dir : 1 };
+  try { localStorage.setItem(PET_SORT_STORE, JSON.stringify(petSort)); } catch (e) {}
+  sortPets();
+}));
 // every word must match somewhere on the pet; matching lines are marked
 function applyPetFilter() {
   const q = petFilter.value.trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean);

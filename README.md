@@ -44,7 +44,8 @@ or bosses narrows the loot to matching items, so `power` lists only the gear wit
 patch notes: standard, guild-cage (I–III), single-use (Imperials), recipe and unique pets. Each card
 gives how to get it, cost, level, role, attacks, buffs, debuffs, skills and base stats, with sources
 and a confidence level; "How pets work" collects the general rules. No source gives skill numbers
-or per-level growth, and the August 2026 Imperial price cuts are unknown. Searchable on every field;
+or per-level growth, and the August 2026 Imperial price cuts are unknown. Sortable by name, level,
+rank, role or attacks (remembered per browser), searchable on every field;
 corrections and added pets are shared (`pets/<id>/<field>` keys, PIN).
 
 ## Respawn timers
