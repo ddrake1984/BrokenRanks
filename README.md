@@ -38,6 +38,14 @@ Loot shows each item once with D A C marks for the paths that list it. Items wit
 (`ITEMS` in `index.html`, copied from the game's tooltips) render as full cards in their rarity
 colour: blue for rares, yellow for epics. A search that doesn't match a dungeon's name, location
 or bosses narrows the loot to matching items, so `power` lists only the gear with Power on it.
+## Pets
+
+36 pets (Polish: zwierzaki) researched 2026-11-03, mostly from wikibr.pl and the official Polish
+patch notes: standard, guild-cage (I–III), single-use (Imperials), recipe and unique pets. Each card
+gives how to get it, cost, level, role, attacks, buffs, debuffs, skills and base stats, with sources
+and a confidence level; "How pets work" collects the general rules. No source gives skill numbers
+or per-level growth, and the August 2026 Imperial price cuts are unknown. Searchable on every field;
+corrections and added pets are shared (`pets/<id>/<field>` keys, PIN).
 
 ## Respawn timers
 
@@ -68,11 +76,3 @@ wrangler secret put EDIT_PIN
 
 Deploy with `wrangler deploy` from `worker/`. The schema is `worker/schema.sql`.
 
-## Pets
-
-36 pets (Polish: zwierzaki) researched 2026-11-03, mostly from wikibr.pl and the official Polish
-patch notes: standard, guild-cage (I–III), single-use (Imperials), recipe and unique pets. Each card
-gives how to get it, cost, level, role, attacks, buffs, debuffs, skills and base stats, with sources
-and a confidence level; "How pets work" collects the general rules. No source gives skill numbers
-or per-level growth, and the August 2026 Imperial price cuts are unknown. Searchable on every field;
-corrections and added pets are shared (`pets/<id>/<field>` keys, PIN).
