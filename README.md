@@ -4,6 +4,7 @@ A single-file reference page for Broken Ranks, live at https://ddrake1984.github
 
 - **Key bindings** — every key rebindable. Click a slot and press the key; modifiers alone (Shift, Ctrl, Alt) bind on release; right-click clears. Saved in that browser only: each person keeps their own.
 - **Champions**, **Flasks**, **Shards** — reference tables. These are **shared**: a correction shows for everyone.
+- Champion levels come from the wikibr.pl Czempioni table (2026-11-03); click the Level heading to sort by level.
 
 ## Shared corrections
 

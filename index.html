@@ -148,6 +148,8 @@ details.dun > summary:focus-visible { outline: 2px solid var(--listen); outline-
 .pip { font: 600 .68rem var(--mono); font-style: normal; width: 1.5em; text-align: center; border: 1px solid; border-radius: 2px; }
 .pip.mode-discovery { color: var(--open); } .pip.mode-adventure { color: var(--listen); } .pip.mode-challenge { color: var(--clash); }
 .pip.off { color: var(--line); }
+.champ-set { display: none; font-size: .78rem; font-weight: 400; }
+#champ-body.flat .champ-set { display: block; }
 .dun-lv { display: inline-flex; gap: 10px; font: 500 .82rem var(--mono); }
 .dun-lv b, .dun-lvls .lbl { font-weight: 600; }
 .mode-discovery.lv { color: var(--open); } .mode-adventure.lv { color: var(--listen); } .mode-challenge.lv { color: var(--clash); }
@@ -244,7 +246,7 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
     </div>
     <div class="tw">
       <table>
-        <thead><tr><th>Champion</th><th class="n">Respawn</th><th class="n">Variance</th><th class="n">Window</th><th><button class="th-btn" id="timer-filter" type="button" aria-pressed="false" title="Show only champions with a running timer">Timer</button></th><th>Area found in</th></tr></thead>
+        <thead><tr><th>Champion</th><th class="n" id="champ-th-level"><button class="th-btn" id="champ-level-sort" type="button" title="Sort by level; click again to reverse, a third time to go back to sets">Level</button></th><th class="n">Respawn</th><th class="n">Variance</th><th class="n">Window</th><th><button class="th-btn" id="timer-filter" type="button" aria-pressed="false" title="Show only champions with a running timer">Timer</button></th><th>Area found in</th></tr></thead>
         <tbody id="champ-body"></tbody>
       </table>
       <p class="empty" id="champ-empty" hidden>No champion, set or area matches that filter.</p>
@@ -574,6 +576,8 @@ const CHAMPIONS = [
     ["Host Yeti", 60, 45, "Slope"],
     ["Mammoth", 120, 60, "Slope"]]]
 ];
+// champion level by "group/row", from research; champions/<group>/<row>/level corrects it
+const CHAMP_LEVELS = {"0/0":"28","0/1":"28","0/2":"16","0/3":"16","0/4":"28","0/5":"28","0/6":"26","0/7":"28","0/8":"32","0/9":"28","0/10":"28","0/11":"26","1/0":"35","1/1":"36","1/2":"36","1/3":"36","1/4":"34","2/0":"85","2/1":"65","2/2":"49","3/0":"48","3/1":"48","3/2":"48","3/3":"55","3/4":"50","4/0":"72","4/1":"70","4/2":"59","4/3":"70","4/4":"56","4/5":"80","4/6":"75","5/0":"125","5/1":"125","5/2":"110","5/3":"110","5/4":"90","5/5":"110","5/6":"120","5/7":"135","5/8":"125","5/9":"130","5/10":"165","5/11":"132","5/12":"160","5/13":"130","5/14":"133","5/15":"135"};
 const dur = m => m < 60 ? m + "m" : Math.floor(m / 60) + "h" + (m % 60 ? " " + (m % 60) + "m" : "");
 
 /* ---------- shared corrections ---------- */
@@ -706,7 +710,7 @@ function renderChampions() {
   champBody.innerHTML = CHAMPIONS.map(([label, sets, rows], gi) => {
     const sk = `champions/${gi}/sets`, setsDef = sets.join("|"), setNames = items(sk, setsDef);
     const setsCell = ed(sk, setsDef, { list: true, sep: " · " });
-    const head = `<tr class="grp" data-group="${gi}"><td colspan="6">${label
+    const head = `<tr class="grp" data-group="${gi}"><td colspan="7">${label
       ? `<div class="setname">${label}</div><div class="sets">${setsCell}</div>` : `<div class="setname">${setsCell}</div>`}</td></tr>`;
     return head + rows.map(([name, t, v, areas, remark], ri) => {
       const p = `champions/${gi}/${ri}/`;
@@ -722,9 +726,11 @@ function renderChampions() {
       }
       const timer = T == null ? `<span class="dim">–</span>`
         : `<button class="timer" type="button" data-t="timers/champions/${gi}/${ri}" data-min="${T}" data-var="${V ?? 0}"></button>`;
+      const lvDef = CHAMP_LEVELS[`${gi}/${ri}`] || "", lvl = (val(p + "level", lvDef).match(/\d+/) || [""])[0];
       const text = [val(p + "name", name), name, label, ...setNames, ...items(p + "areas", areas)].join(" ").toLowerCase();
-      return `<tr data-group="${gi}" data-text="${esc(text)}">
-        <td class="strong">${ed(p + "name", name)}${remark ? `<div class="dim" style="font-size:.8rem;font-weight:400">${remark}</div>` : ""}</td>
+      return `<tr data-group="${gi}" data-row="${ri}" data-level="${lvl}" data-text="${esc(text)}">
+        <td class="strong">${ed(p + "name", name)}${remark ? `<div class="dim" style="font-size:.8rem;font-weight:400">${remark}</div>` : ""}<div class="dim champ-set">${esc(label || setNames.join(" · "))}</div></td>
+        <td class="n">${ed(p + "level", lvDef, { plain: true })}</td>
         <td class="n">${ed(p + "respawn", t)} ${daily ? "daily" : "min"}</td>
         <td class="n">${v == null ? "–" : ed(p + "variance", v) + " min"}</td>
         <td class="n">${window_}</td>
@@ -732,9 +738,34 @@ function renderChampions() {
         <td class="lines">${ed(p + "areas", areas, { list: true })}</td></tr>`;
     }).join("");
   }).join("");
+  sortChamps();
   applyFilter();
   tickTimers();
 }
+// The Level heading sorts every champion by level, set headings hidden and each row naming its set;
+// clicking again reverses, a third click goes back to grouping by set. Blank levels go last.
+// Remembered per browser.
+const CHAMP_SORT_STORE = "brokenranks-champ-sort";
+let champSort = 0; // 0 grouped by set, 1 level ascending, -1 descending
+try { champSort = Number(localStorage.getItem(CHAMP_SORT_STORE)) || 0; } catch (e) {}
+function sortChamps() {
+  champBody.classList.toggle("flat", champSort !== 0);
+  const th = document.getElementById("champ-th-level");
+  if (champSort) th.setAttribute("aria-sort", champSort > 0 ? "ascending" : "descending"); else th.removeAttribute("aria-sort");
+  if (!champSort) return;
+  const rows = [...champBody.querySelectorAll("tr:not(.grp)")];
+  rows.sort((a, b) => {
+    const x = a.dataset.level, y = b.dataset.level;
+    if (!x !== !y) return x ? -1 : 1;
+    return champSort * (x - y) || a.dataset.group - b.dataset.group || a.dataset.row - b.dataset.row;
+  });
+  rows.forEach(tr => champBody.appendChild(tr));
+}
+document.getElementById("champ-level-sort").addEventListener("click", () => {
+  champSort = champSort === 0 ? 1 : champSort === 1 ? -1 : 0;
+  try { localStorage.setItem(CHAMP_SORT_STORE, String(champSort)); } catch (e) {}
+  renderChampions();
+});
 // runningOnly: the Timer heading was clicked, so only champions with a running timer show
 let runningOnly = false;
 function applyFilter() {
@@ -746,7 +777,8 @@ function applyFilter() {
     if (tr.hidden !== !!hide) tr.hidden = !!hide;
     if (!hide) shown.add(tr.dataset.group);
   });
-  champBody.querySelectorAll("tr.grp").forEach(tr => { const h = !shown.has(tr.dataset.group); if (tr.hidden !== h) tr.hidden = h; });
+  const flat = champSort !== 0;
+  champBody.querySelectorAll("tr.grp").forEach(tr => { const h = flat || !shown.has(tr.dataset.group); if (tr.hidden !== h) tr.hidden = h; });
   const empty = document.getElementById("champ-empty");
   empty.hidden = shown.size > 0;
   empty.textContent = runningOnly && !q ? "No timers are running. Click the Timer heading again to show every champion."
