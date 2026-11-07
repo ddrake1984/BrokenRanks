@@ -50,6 +50,14 @@ or per-level growth, and the August 2026 Imperial price cuts are unknown. Sortab
 rank, role or attacks (remembered per browser), searchable on every field;
 corrections and added pets are shared (`pets/<id>/<field>` keys, PIN).
 
+## Events
+
+Countdowns to upcoming events (folded in from the standalone event timer, 2026-11-07). Enter hours and
+minutes per event, press **Start**: one clock runs them all, rows go green under two minutes and read
+"Due" at zero, and the bar names the next one. **Reset all** (click twice) sets each back to its entered
+time. Per browser only (localStorage `br-event-timer-v1`), not shared; it follows the real clock, so
+switching tabs or reloading keeps it right.
+
 ## Respawn timers
 
 Each champion has a **Start** button: click it when the champion dies. It counts down to the earliest

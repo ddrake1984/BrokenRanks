@@ -196,6 +196,56 @@ body:not(.editing) .pet-notes .ed:empty { display: none; }
 .act.danger { color: var(--clash); border-color: var(--clash); }
 body.editing .ed { cursor: text; border-bottom: 1px dotted var(--muted); }
 body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen); }
+/* event timer: one clock for every countdown; rows go green inside two minutes, grey at zero */
+.ev-clock { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; background: var(--panel); border: 1px solid var(--line);
+  padding: 12px 16px; margin-bottom: 14px; max-width: 860px; box-sizing: border-box; }
+.ev-clock .tools { align-items: center; }
+#ev-toggle { min-width: 6.5rem; border-color: var(--listen); color: var(--listen); }
+#ev-toggle.is-running { background: var(--listen); color: var(--bg); }
+.act.confirm { border-color: var(--clash); color: var(--clash); }
+.ev-state { display: inline-flex; align-items: center; gap: 7px; font: 600 .85rem var(--display); letter-spacing: .05em; color: var(--muted); }
+.ev-state i { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+.ev-state.running { color: var(--fg); }
+.ev-state.running i { background: var(--listen); animation: ev-pulse 1.6s ease-in-out infinite; }
+@keyframes ev-pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .ev-state.running i { animation: none; } }
+.ev-next { margin-left: auto; color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+.ev-next strong { color: var(--fg); font-weight: 500; }
+.ev-next .t { font: 500 .95rem var(--mono); font-variant-numeric: tabular-nums; color: var(--listen); }
+.ev-ledger { display: flex; flex-direction: column; gap: 6px; max-width: 860px; }
+.ev-cols, .ev-row { display: grid; grid-template-columns: minmax(0, 1fr) 11.5rem 7.5rem 7rem 2.25rem;
+  grid-template-areas: "name time count status del"; align-items: center; gap: 12px; }
+.ev-cols { padding: 0 15px 4px; font: 600 .8rem var(--display); letter-spacing: .05em; color: var(--muted); max-width: 860px; box-sizing: border-box; }
+.ev-cols .r { text-align: right; }
+.ev-row { background: var(--panel); border: 1px solid var(--line); padding: 8px 14px; transition: background-color .3s, border-color .3s; }
+.ev-name { grid-area: name; min-width: 0; } .ev-time { grid-area: time; } .ev-count { grid-area: count; }
+.ev-status { grid-area: status; } .ev-del { grid-area: del; }
+.ev-row input { font: 15px var(--body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 2px; padding: 6px 8px; }
+.ev-row input:hover { border-color: var(--muted); }
+.ev-row input::placeholder { color: var(--muted); }
+.ev-name input { width: 100%; box-sizing: border-box; }
+.ev-time { display: flex; align-items: center; gap: 5px; }
+.ev-time input { width: 3.4em; text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; padding-right: 5px; }
+.ev-time label { color: var(--muted); margin-right: 4px; }
+.ev-count { font: 500 1.2rem var(--mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.ev-pill { display: inline-block; padding: 2px 9px; border: 1px solid transparent; border-radius: 2px;
+  font: 500 .75rem var(--body); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.ev-del button { border: 0; background: none; color: var(--muted); font-size: 1.35rem; line-height: 1; padding: 4px; width: 100%; cursor: pointer; }
+.ev-del button:hover { color: var(--clash); }
+.ev-row.unset .ev-count { color: var(--muted); }
+.ev-row.waiting .ev-count { color: var(--fg); }
+.ev-row.soon { border-color: var(--open); background: color-mix(in srgb, var(--open) 12%, var(--panel)); }
+.ev-row.soon .ev-count { color: var(--open); }
+.ev-row.soon .ev-pill { background: var(--open); color: var(--bg); }
+.ev-row.due .ev-count { color: var(--muted); }
+.ev-row.due .ev-pill { color: var(--muted); border-color: var(--muted); }
+.ev-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-top: 14px; max-width: 860px; }
+@media (max-width: 600px) {
+  .ev-cols { display: none; }
+  .ev-row { grid-template-columns: minmax(0, 1fr) auto 2.25rem; grid-template-areas: "name status del" "time count count"; gap: 8px 10px; }
+  .ev-count { font-size: 1.1rem; }
+  .ev-next { margin-left: 0; flex-basis: 100%; }
+}
 .cinput { font: 500 .9rem var(--body); color: var(--fg); background: var(--bg); border: 1px solid var(--listen);
   border-radius: 2px; padding: 2px 6px; width: 100%; min-width: 160px; }
 </style>
@@ -211,6 +261,7 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
     <button class="tab" role="tab" id="tab-npcs" aria-controls="npcs" type="button">NPCs</button>
     <button class="tab" role="tab" id="tab-dungeons" aria-controls="dungeons" type="button">Dungeons</button>
     <button class="tab" role="tab" id="tab-pets" aria-controls="pets" type="button">Pets</button>
+    <button class="tab" role="tab" id="tab-events" aria-controls="events" type="button">Events</button>
   </nav>
   <div class="editbar" id="editbar" hidden>
     <button class="act" id="edit-toggle" type="button">Unlock editing</button>
@@ -356,16 +407,48 @@ body.editing .ed:hover { color: var(--listen); border-bottom-color: var(--listen
       <div class="tw"><table id="shat-set"></table></div>
     </div>
   </div>
+
+  <!-- EVENTS -->
+  <div role="tabpanel" id="events" aria-labelledby="tab-events" hidden>
+    <div class="bar">
+      <p class="hint">Countdowns to upcoming events. Enter how long until each one, then press <b>Start</b>: one clock runs them all. Rows turn green with two minutes to go. Kept in this browser only; the countdown follows the real clock, so it stays right if you switch tabs or close and reopen the page.</p>
+    </div>
+    <section class="ev-clock" aria-label="Clock">
+      <div class="tools">
+        <button class="act" id="ev-toggle" type="button" aria-pressed="false">Start</button>
+        <span class="ev-state" id="ev-state"><i aria-hidden="true"></i><span id="ev-state-text">Paused</span></span>
+        <button class="act" id="ev-reset" type="button" title="Set every countdown back to the time you entered, and pause">Reset all</button>
+      </div>
+      <div class="ev-next" id="ev-next" aria-live="polite"></div>
+    </section>
+    <section aria-label="Events">
+      <div class="ev-cols" aria-hidden="true"><span>Event</span><span>Time to event</span><span class="r">Countdown</span><span></span><span></span></div>
+      <div class="ev-ledger" id="ev-ledger"></div>
+    </section>
+    <div class="ev-foot"><span></span><button class="act" id="ev-add" type="button">+ Add event</button></div>
+    <template id="ev-row-tpl">
+      <div class="ev-row unset" role="group">
+        <div class="ev-name"><input class="name" type="text" maxlength="80" placeholder="Event name" autocomplete="off"></div>
+        <div class="ev-time">
+          <input class="h" type="number" min="0" max="99" step="1" inputmode="numeric" placeholder="0"><label class="hl">h</label>
+          <input class="m" type="number" min="0" max="999" step="1" inputmode="numeric" placeholder="0"><label class="ml">m</label>
+        </div>
+        <div class="ev-count">–</div>
+        <div class="ev-status"><span class="ev-pill" hidden></span></div>
+        <div class="ev-del"><button type="button">×</button></div>
+      </div>
+    </template>
+  </div>
 </div>
 
 <script>
 /* ---------- tabs ---------- */
-const TABS = ["keys", "champions", "flasks", "shards", "npcs", "dungeons", "pets"];
+const TABS = ["keys", "champions", "flasks", "shards", "npcs", "dungeons", "pets", "events"];
 function showTab(name) {
   if (!TABS.includes(name)) name = "keys";
   TABS.forEach(t => {
     document.getElementById(t).hidden = t !== name;
-    document.getElementById("editbar").hidden = name === "keys";
+    document.getElementById("editbar").hidden = name === "keys" || name === "events";
     const b = document.getElementById("tab-" + t);
     b.setAttribute("aria-selected", t === name);
     b.tabIndex = t === name ? 0 : -1;
@@ -1619,6 +1702,148 @@ function shatter(el, BASE, name) {
 renderShared();
 if (pin) setEditing(true);
 loadShared();
+
+/* ---------- event timer ----------
+  Each event stores `remaining` (ms left when the clock last stopped); the clock stores
+  `runningSince` (Date.now() at Start, null when paused). Time left = remaining - (now - runningSince),
+  so it follows the real clock through background tabs and reloads. Per browser, in localStorage. */
+(() => {
+  const KEY = "br-event-timer-v1";
+  const WARN_MS = 2 * 60 * 1000;
+  const MIN_SLOTS = 5;
+  const PILL = { unset: "", waiting: "", soon: "Under 2 min", due: "Due" };
+  const $ = id => document.getElementById(id);
+  const ledger = $("ev-ledger"), tpl = $("ev-row-tpl"), toggleBtn = $("ev-toggle"), resetBtn = $("ev-reset");
+  const stateEl = $("ev-state"), stateText = $("ev-state-text"), nextEl = $("ev-next");
+  const state = { slots: [], runningSince: null };
+
+  const toInt = (v, max) => { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.min(Math.max(n, 0), max) : 0; };
+  const setMs = s => (s.h * 60 + s.m) * 60000;
+  const blank = () => ({ name: "", h: 0, m: 0, remaining: 0 });
+  const elapsed = () => state.runningSince ? Math.max(0, Date.now() - state.runningSince) : 0;
+  const leftOf = s => Math.max(0, s.remaining - elapsed());
+  const label = (s, i) => s.name.trim() || `Event ${i + 1}`;
+  function clock(ms) {
+    const t = Math.ceil(ms / 1000), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+    return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  }
+  function phase(s) {
+    if (!setMs(s)) return "unset";
+    const l = leftOf(s);
+    return l <= 0 ? "due" : l <= WARN_MS ? "soon" : "waiting";
+  }
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({
+        slots: state.slots.map(({ name, h, m, remaining }) => ({ name, h, m, remaining })), runningSince: state.runningSince }));
+    } catch (e) {}
+  }
+  function load() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
+    if (saved && Array.isArray(saved.slots) && saved.slots.length) {
+      state.slots = saved.slots.map(x => ({ name: String(x.name ?? "").slice(0, 80), h: toInt(x.h, 99), m: toInt(x.m, 999),
+        remaining: Math.max(0, Number(x.remaining) || 0) }));
+      state.runningSince = Number.isFinite(saved.runningSince) ? saved.runningSince : null;
+    }
+    while (state.slots.length < MIN_SLOTS) state.slots.push(blank());
+  }
+  function renderRows() {
+    ledger.replaceChildren();
+    state.slots.forEach((s, i) => {
+      const row = tpl.content.firstElementChild.cloneNode(true);
+      const name = row.querySelector(".name"), h = row.querySelector(".h"), m = row.querySelector(".m"), del = row.querySelector(".ev-del button");
+      name.id = `ev${i}-name`; h.id = `ev${i}-h`; m.id = `ev${i}-m`;
+      row.querySelector(".hl").htmlFor = h.id; row.querySelector(".ml").htmlFor = m.id;
+      name.setAttribute("aria-label", `Event ${i + 1} name`);
+      h.setAttribute("aria-label", `Event ${i + 1} hours`);
+      m.setAttribute("aria-label", `Event ${i + 1} minutes`);
+      del.setAttribute("aria-label", `Remove event ${i + 1}`);
+      row.setAttribute("aria-label", `Event ${i + 1}`);
+      name.value = s.name; h.value = s.h || ""; m.value = s.m || "";
+      name.addEventListener("input", () => { s.name = name.value; save(); updateNext(); });
+      const onTime = () => { s.h = toInt(h.value, 99); s.m = toInt(m.value, 999); s.remaining = setMs(s) + elapsed(); save(); tick(); };
+      h.addEventListener("input", onTime); m.addEventListener("input", onTime);
+      h.addEventListener("change", () => { h.value = s.h || ""; });
+      m.addEventListener("change", () => { m.value = s.m || ""; });
+      del.addEventListener("click", () => {
+        state.slots.splice(i, 1);
+        while (state.slots.length < MIN_SLOTS) state.slots.push(blank());
+        save(); renderRows();
+      });
+      ledger.append(row);
+    });
+    tick();
+  }
+  function tick() {
+    const rows = ledger.children;
+    state.slots.forEach((s, i) => {
+      const row = rows[i];
+      if (!row) return;
+      const p = phase(s);
+      if (row.dataset.phase !== p) {
+        row.classList.remove("unset", "waiting", "soon", "due");
+        row.classList.add(p);
+        row.dataset.phase = p;
+        const pill = row.querySelector(".ev-pill");
+        pill.textContent = PILL[p]; pill.hidden = !PILL[p];
+      }
+      row.querySelector(".ev-count").textContent = p === "unset" ? "–" : clock(leftOf(s));
+    });
+    updateNext();
+  }
+  function updateNext() {
+    let best = null;
+    state.slots.forEach((s, i) => {
+      const p = phase(s);
+      if (p === "waiting" || p === "soon") { const l = leftOf(s); if (!best || l < best.l) best = { s, i, l }; }
+    });
+    if (best) {
+      const strong = document.createElement("strong"), t = document.createElement("span");
+      strong.textContent = label(best.s, best.i);
+      t.className = "t"; t.textContent = clock(best.l);
+      nextEl.replaceChildren("Next: ", strong, " in ", t);
+    } else nextEl.textContent = state.slots.some(s => setMs(s)) ? "Every event with a time is due." : "Enter a time for each event, then press Start.";
+  }
+  function renderClock() {
+    const running = !!state.runningSince;
+    toggleBtn.textContent = running ? "Pause" : "Start";
+    toggleBtn.classList.toggle("is-running", running);
+    toggleBtn.setAttribute("aria-pressed", String(running));
+    stateEl.classList.toggle("running", running);
+    stateText.textContent = running ? "Running" : "Paused";
+  }
+  toggleBtn.addEventListener("click", () => {
+    if (state.runningSince) {
+      const e = elapsed();
+      state.slots.forEach(s => { s.remaining = Math.max(0, s.remaining - e); });
+      state.runningSince = null;
+    } else state.runningSince = Date.now();
+    save(); renderClock(); tick();
+  });
+  let resetTimer = null;
+  function disarmReset() { clearTimeout(resetTimer); resetBtn.classList.remove("confirm"); resetBtn.textContent = "Reset all"; }
+  resetBtn.addEventListener("click", () => {
+    if (!resetBtn.classList.contains("confirm")) {
+      resetBtn.classList.add("confirm"); resetBtn.textContent = "Click again to reset";
+      resetTimer = setTimeout(disarmReset, 4000);
+      return;
+    }
+    disarmReset();
+    state.runningSince = null;
+    state.slots.forEach(s => { s.remaining = setMs(s); });
+    save(); renderClock(); tick();
+  });
+  $("ev-add").addEventListener("click", () => {
+    state.slots.push(blank());
+    save(); renderRows();
+    const last = ledger.lastElementChild;
+    if (last) last.querySelector(".name").focus();
+  });
+  load(); renderClock(); renderRows();
+  setInterval(tick, 250);
+  document.addEventListener("visibilitychange", tick);
+})();
 </script>
 </body>
 </html>
